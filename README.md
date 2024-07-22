@@ -40,7 +40,7 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 
 ### 安装
 
-由于模型较小，预先将英文表格识别模型(`en_ppstructure_mobile_v2_SLANet.onnx`)打包进了whl包内，如果做英文表格识别，可直接安装使用
+由于模型较小，预先将英文表格识别模型(`en_ppstructure_mobile_v2_SLANet.onnx`)打包进了whl包内，如果做英文表格识别，可直接安装使用。
 
 > ⚠️注意：`rapid_table>=v0.1.0`之后，不再将`rapidocr_onnxruntime`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr_onnxruntime`包。
 
@@ -53,56 +53,62 @@ pip install rapid_table
 
 #### python脚本运行
 
-    ````python
-    from pathlib import Path
+RapidTable类提供model_path参数，可以自行指定上述2个模型，默认是`en_ppstructure_mobile_v2_SLANet.onnx`。举例如下：
 
-    from rapid_table import RapidTable
-    from rapid_table import RapidTable, VisTable
+```python
+table_engine = RapidTable(model_path='ch_ppstructure_mobile_v2_SLANet.onnx')
+```
 
-    # RapidTable类提供model_path参数，可以自行指定上述2个模型，默认是en_ppstructure_mobile_v2_SLANet.onnx
-    # table_engine = RapidTable(model_path='ch_ppstructure_mobile_v2_SLANet.onnx')
-    table_engine = RapidTable()
-    ocr_engine = RapidOCR()
-    viser = VisTable()
+完整示例：
 
-    img_path = 'test_images/table.jpg'
+```python
+from pathlib import Path
 
-    ocr_result, _ = ocr_engine(img_path)
-    table_html_str, table_cell_bboxes, elapse = table_engine(img_path, ocr_result)
+from rapid_table import RapidTable
+from rapid_table import RapidTable, VisTable
 
-    save_dir = Path("./inference_results/")
-    save_dir.mkdir(parents=True, exist_ok=True)
+table_engine = RapidTable()
+ocr_engine = RapidOCR()
+viser = VisTable()
 
-    save_html_path = save_dir / f"{Path(img_path).stem}.html"
-    save_drawed_path = save_dir / f"vis_{Path(img_path).name}"
+img_path = 'test_images/table.jpg'
 
-    viser(img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_path)
+ocr_result, _ = ocr_engine(img_path)
+table_html_str, table_cell_bboxes, elapse = table_engine(img_path, ocr_result)
 
-    print(table_html_str)
-    ````
+save_dir = Path("./inference_results/")
+save_dir.mkdir(parents=True, exist_ok=True)
+
+save_html_path = save_dir / f"{Path(img_path).stem}.html"
+save_drawed_path = save_dir / f"vis_{Path(img_path).name}"
+
+viser(img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_path)
+
+print(table_html_str)
+```
 
 #### 终端运行
 
 - 用法:
 
-     ```bash
-     $ rapid_table -h
-     usage: rapid_table [-h] [-v] -img IMG_PATH [-m MODEL_PATH]
+  ```bash
+  $ rapid_table -h
+  usage: rapid_table [-h] [-v] -img IMG_PATH [-m MODEL_PATH]
 
-     optional arguments:
-     -h, --help            show this help message and exit
-     -v, --vis             Whether to visualize the layout results.
-     -img IMG_PATH, --img_path IMG_PATH
-                           Path to image for layout.
-     -m MODEL_PATH, --model_path MODEL_PATH
-                           The model path used for inference.
-     ```
+  optional arguments:
+  -h, --help            show this help message and exit
+  -v, --vis             Whether to visualize the layout results.
+  -img IMG_PATH, --img_path IMG_PATH
+                        Path to image for layout.
+  -m MODEL_PATH, --model_path MODEL_PATH
+                        The model path used for inference.
+  ```
 
 - 示例:
 
-     ```bash
-     rapid_table -v -img test_images/table.jpg
-     ```
+  ```bash
+  rapid_table -v -img test_images/table.jpg
+  ```
 
 ### 结果
 
