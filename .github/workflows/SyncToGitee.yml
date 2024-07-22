@@ -19,5 +19,5 @@ jobs:
           dst_token:  ${{ secrets.GITEE_TOKEN }}
           force_update: true
           # only sync this repo
-          static_list: "RapidTable"
+          white_list: "RapidTable"
           debug: true
