@@ -19,12 +19,17 @@ RapidTable库是专门用来文档类图像的表格结构还原，结合RapidOC
 
 目前支持两种类别的表格识别模型：中文和英文表格识别模型，具体可参见下面表格：
 
-  | 模型类型 |                模型名称                | 模型大小 |
-  | :------: | :------------------------------------: | :------: |
-  |   英文   | `en_ppstructure_mobile_v2_SLANet.onnx` |   7.3M   |
-  |   中文   | `ch_ppstructure_mobile_v2_SLANet.onnx` |   7.4M   |
+slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升，但paddle2onnx暂时不支持转换
+
+  |      模型类型      |                  模型名称                  | 模型大小 |
+  |:--------------:|:--------------------------------------:| :------: |
+  |       英文       | `en_ppstructure_mobile_v2_SLANet.onnx` |   7.3M   |
+  |       中文       | `ch_ppstructure_mobile_v2_SLANet.onnx` |   7.4M   |
+  | slanet_plus 中文 |          `inference.pdmodel`           |   7.4M   |
+
 
 模型来源：[PaddleOCR 表格识别](https://github.com/PaddlePaddle/PaddleOCR/blob/133d67f27dc8a241d6b2e30a9f047a0fb75bebbe/ppstructure/table/README_ch.md)
+[PaddleX-SlaNetPlus 表格识别](https://github.com/PaddlePaddle/PaddleX/blob/release/3.0-beta1/docs/module_usage/tutorials/ocr_modules/table_structure_recognition.md)
 
 模型下载地址为：[百度网盘](https://pan.baidu.com/s/1PI9fksW6F6kQfJhwUkewWg?pwd=p29g) | [Google Drive](https://drive.google.com/drive/folders/1DAPWSN2zGQ-ED_Pz7RaJGTjfkN2-Mvsf?usp=sharing) |
 
@@ -47,6 +52,8 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 ```bash
 pip install rapidocr_onnxruntime
 pip install rapid_table
+# 安装会引入paddlepaddle cpu 3.0.0b0
+#pip install slanet_plus_table
 ```
 
 ### 使用方式
@@ -57,6 +64,7 @@ RapidTable类提供model_path参数，可以自行指定上述2个模型，默�
 
 ```python
 table_engine = RapidTable(model_path='ch_ppstructure_mobile_v2_SLANet.onnx')
+#table_engine = SLANetPlus()
 ```
 
 完整示例：
@@ -68,6 +76,7 @@ from rapid_table import RapidTable
 from rapid_table import RapidTable, VisTable
 
 table_engine = RapidTable()
+#table_engine = SLANetPlus()
 ocr_engine = RapidOCR()
 viser = VisTable()
 
@@ -155,5 +164,8 @@ print(table_html_str)
 
 - 去掉返回表格的html字符串中的`<thead></thead><tbody></tbody>`元素，便于后续统一。
 - 采用Black工具优化代码
+
+#### 2024.10.13 update
+- 补充最新paddlex-SLANet-plus 模型(paddle2onnx原因暂不能支持onnx)
 
 </details>
