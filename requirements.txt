@@ -4,3 +4,4 @@ numpy>=1.21.6,<2
 Pillow
 requests
 pytest
+get_pypi_latest_version
