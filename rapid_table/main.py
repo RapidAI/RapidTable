@@ -19,12 +19,13 @@ root_dir = Path(__file__).resolve().parent
 
 
 class RapidTable:
-    def __init__(self, model_path: Optional[str] = None):
+    def __init__(self, model_path: Optional[str] = None, model_type: str = None):
         if model_path is None:
             model_path = str(
-                root_dir / "models" / "en_ppstructure_mobile_v2_SLANet.onnx"
+                root_dir / "models" / "slanet-plus.onnx"
             )
-
+            model_type = "slanet-plus"
+        self.model_type = model_type
         self.load_img = LoadImage()
         self.table_structure = TableStructurer(model_path)
         self.table_matcher = TableMatch()
@@ -54,6 +55,9 @@ class RapidTable:
         dt_boxes, rec_res = self.get_boxes_recs(ocr_result, h, w)
 
         pred_structures, pred_bboxes, _ = self.table_structure(copy.deepcopy(img))
+        # 适配slanet-plus模型输出的box缩放还原
+        if self.model_type == "slanet-plus":
+            pred_bboxes = self.adapt_slanet_plus(img, pred_bboxes)
         pred_html = self.table_matcher(pred_structures, pred_bboxes, dt_boxes, rec_res)
 
         elapse = time.time() - s
@@ -76,7 +80,15 @@ class RapidTable:
             r_boxes.append(box)
         dt_boxes = np.array(r_boxes)
         return dt_boxes, rec_res
-
+    def adapt_slanet_plus(self, img: np.ndarray, pred_bboxes: np.ndarray) -> np.ndarray:
+        h, w = img.shape[:2]
+        resized = 488
+        ratio = min(resized / h, resized / w)
+        w_ratio = resized / (w * ratio)
+        h_ratio = resized / (h * ratio)
+        pred_bboxes[:, 0::2] *= w_ratio
+        pred_bboxes[:, 1::2] *= h_ratio
+        return pred_bboxes
 
 def main():
     parser = argparse.ArgumentParser()

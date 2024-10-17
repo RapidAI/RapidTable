@@ -53,7 +53,7 @@ setuptools.setup(
         f"{MODULE_NAME}.table_matcher",
         f"{MODULE_NAME}.table_structure",
     ],
-    package_data={"": ["en_ppstructure_mobile_v2_SLANet.onnx"]},
+    package_data={"": ["slanet-plus.onnx"]},
     keywords=["ppstructure,table,rapidocr,rapid_table"],
     classifiers=[
         "Programming Language :: Python :: 3.6",

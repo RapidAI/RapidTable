@@ -1,6 +1,0 @@
---extra-index-url=https://www.paddlepaddle.org.cn/packages/stable/cpu/
-opencv_python>=4.5.1.48
-numpy>=1.21.6,<2
-paddlepaddle==3.0.0b0
-Pillow
-requests
