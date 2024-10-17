@@ -114,7 +114,7 @@ class VisTable:
         return drawed_img
 
     def insert_border_style(self, table_html_str: str):
-        style_res = """<style>td {border-left: 1px solid;border-bottom:1px solid;}
+        style_res = """<meta charset="UTF-8"><style>td {border-left: 1px solid;border-bottom:1px solid;}
                     table, th {border-top:1px solid;font-size: 10px;
                     border-collapse: collapse;border-right: 1px solid;}
                     </style>"""

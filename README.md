@@ -19,13 +19,13 @@ RapidTable库是专门用来文档类图像的表格结构还原，结合RapidOC
 
 目前支持两种类别的表格识别模型：中文和英文表格识别模型，具体可参见下面表格：
 
-slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升，但paddle2onnx暂时不支持转换
+slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升
 
   |      模型类型      |                  模型名称                  | 模型大小 |
   |:--------------:|:--------------------------------------:| :------: |
   |       英文       | `en_ppstructure_mobile_v2_SLANet.onnx` |   7.3M   |
   |       中文       | `ch_ppstructure_mobile_v2_SLANet.onnx` |   7.4M   |
-  | slanet_plus 中文 |          `inference.pdmodel`           |   7.4M   |
+  | slanet_plus 中文 |          `slanet-plus.onnx`           |   6.8M   |
 
 
 模型来源：[PaddleOCR 表格识别](https://github.com/PaddlePaddle/PaddleOCR/blob/133d67f27dc8a241d6b2e30a9f047a0fb75bebbe/ppstructure/table/README_ch.md)
@@ -45,26 +45,23 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 
 ### 安装
 
-由于模型较小，预先将英文表格识别模型(`en_ppstructure_mobile_v2_SLANet.onnx`)打包进了whl包内，如果做英文表格识别，可直接安装使用。
+由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。
 
 > ⚠️注意：`rapid_table>=v0.1.0`之后，不再将`rapidocr_onnxruntime`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr_onnxruntime`包。
 
 ```bash
 pip install rapidocr_onnxruntime
 pip install rapid_table
-# 安装会引入paddlepaddle cpu 3.0.0b0
-#pip install slanet_plus_table
 ```
 
 ### 使用方式
 
 #### python脚本运行
 
-RapidTable类提供model_path参数，可以自行指定上述2个模型，默认是`en_ppstructure_mobile_v2_SLANet.onnx`。举例如下：
+RapidTable类提供model_path参数，可以自行指定上述2个模型，默认是`slanet-plus.onnx`。举例如下：
 
 ```python
-table_engine = RapidTable(model_path='ch_ppstructure_mobile_v2_SLANet.onnx')
-#table_engine = SLANetPlus()
+table_engine = RapidTable()
 ```
 
 完整示例：
@@ -72,11 +69,9 @@ table_engine = RapidTable(model_path='ch_ppstructure_mobile_v2_SLANet.onnx')
 ```python
 from pathlib import Path
 
-from rapid_table import RapidTable
 from rapid_table import RapidTable, VisTable
 
 table_engine = RapidTable()
-#table_engine = SLANetPlus()
 ocr_engine = RapidOCR()
 viser = VisTable()
 
