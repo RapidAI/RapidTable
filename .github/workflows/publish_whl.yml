@@ -34,6 +34,7 @@ jobs:
 
           pip install -r requirements.txt
           pip install rapidocr_onnxruntime
+          pip install pytest
           pytest tests/test_table.py
 
   GenerateWHL_PushPyPi:
@@ -52,6 +53,8 @@ jobs:
       - name: Run setup
         run: |
           pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install wheel get_pypi_latest_version
           wget $RESOURCES_URL
           ZIP_NAME=${RESOURCES_URL##*/}
           DIR_NAME=${ZIP_NAME%.*}
