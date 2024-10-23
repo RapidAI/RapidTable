@@ -33,7 +33,12 @@ slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升
 
 模型下载地址为：[百度网盘](https://pan.baidu.com/s/1PI9fksW6F6kQfJhwUkewWg?pwd=p29g) | [Google Drive](https://drive.google.com/drive/folders/1DAPWSN2zGQ-ED_Pz7RaJGTjfkN2-Mvsf?usp=sharing) |
 
-### 与[TableStructureRec](https://github.com/RapidAI/TableStructureRec)关系
+###效果展示
+<div align="center">
+    <img src="https://github.com/RapidAI/RapidTable/releases/download/assets/preview.gif" alt="Demo" width="100%" height="100%">
+</div>
+
+### 与[TableStructureRec](https://github.com/RapidAI/TableStructureRec) 关系
 
 TableStructureRec库是一个表格识别算法的集合库，当前有`wired_table_rec`有线表格识别算法和`lineless_table_rec`无线表格识别算法的推理包。
 
@@ -41,7 +46,7 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 
 总之，RapidTable和TabelStructureRec都是表格识别的仓库。大家可以都试试，哪个好用用哪个。由于每个算法都不太同，暂时不打算做统一处理。
 
-关于三种表格识别算法的比较，可参见文档：[docs](https://rapidai.github.io/TableStructureRec/docs/blog/table_rec_evaluate/)
+关于表格识别算法的比较，可参见[TableStructureRec测评](https://github.com/RapidAI/TableStructureRec#指标结果)
 
 ### 安装
 
