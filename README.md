@@ -34,6 +34,7 @@ slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升
 模型下载地址为：[百度网盘](https://pan.baidu.com/s/1PI9fksW6F6kQfJhwUkewWg?pwd=p29g) | [Google Drive](https://drive.google.com/drive/folders/1DAPWSN2zGQ-ED_Pz7RaJGTjfkN2-Mvsf?usp=sharing) |
 
 ### 效果展示
+
 <div align="center">
     <img src="https://github.com/RapidAI/RapidTable/releases/download/assets/preview.gif" alt="Demo" width="100%" height="100%">
 </div>
