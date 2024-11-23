@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import time
+from typing import Dict, Any
 
 import numpy as np
 
@@ -19,10 +20,10 @@ from .utils import OrtInferSession, TableLabelDecode, TablePreprocess
 
 
 class TableStructurer:
-    def __init__(self, model_path: str):
+    def __init__(self, config: Dict[str, Any]):
         self.preprocess_op = TablePreprocess()
 
-        self.session = OrtInferSession(model_path)
+        self.session = OrtInferSession(config)
 
         self.character = self.session.get_metadata()
         self.postprocess_op = TableLabelDecode(self.character)
@@ -37,7 +38,7 @@ class TableStructurer:
         img = np.expand_dims(img, axis=0)
         img = img.copy()
 
-        outputs = self.session(img)
+        outputs = self.session([img])
 
         preds = {"loc_preds": outputs[0], "structure_probs": outputs[1]}
 

@@ -19,7 +19,7 @@ root_dir = Path(__file__).resolve().parent
 
 
 class RapidTable:
-    def __init__(self, model_path: Optional[str] = None, model_type: str = None):
+    def __init__(self, model_path: Optional[str] = None, model_type: str = None, use_cuda: bool = False):
         if model_path is None:
             model_path = str(
                 root_dir / "models" / "slanet-plus.onnx"
@@ -27,7 +27,11 @@ class RapidTable:
             model_type = "slanet-plus"
         self.model_type = model_type
         self.load_img = LoadImage()
-        self.table_structure = TableStructurer(model_path)
+        config = {
+            "model_path": model_path,
+            "use_cuda": use_cuda,
+        }
+        self.table_structure = TableStructurer(config)
         self.table_matcher = TableMatch()
 
         try:
