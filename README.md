@@ -44,7 +44,7 @@ slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升
 <details>
 
 #### 2024.11.24 update
-- 支持gpu推理，适配 rapidOCR 单字识别匹配
+- 支持gpu推理，适配 rapidOCR 单字识别匹配,支持逻辑坐标返回及可视化
 
 #### 2024.10.13 update
 - 补充最新paddlex-SLANet-plus 模型(paddle2onnx原因暂不能支持onnx)
@@ -142,6 +142,11 @@ save_html_path = save_dir / f"{Path(img_path).stem}.html"
 save_drawed_path = save_dir / f"vis_{Path(img_path).name}"
 
 viser(img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_path)
+
+# 返回逻辑坐标
+# table_html_str, table_cell_bboxes, logic_points, elapse = table_engine(img_path, ocr_result, return_logic_points=True)
+# save_logic_path = save_dir / f"vis_logic_{Path(img_path).name}"
+# viser(img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_path,logic_points, save_logic_path)
 
 print(table_html_str)
 ```
