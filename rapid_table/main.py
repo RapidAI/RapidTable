@@ -43,6 +43,7 @@ class RapidTable:
         self,
         img_content: Union[str, np.ndarray, bytes, Path],
         ocr_result: List[Union[List[List[float]], str, str]] = None,
+        return_logic_points = False
     ) -> Tuple[str, float]:
         if self.ocr_engine is None and ocr_result is None:
             raise ValueError(
@@ -63,7 +64,11 @@ class RapidTable:
         if self.model_type == "slanet-plus":
             pred_bboxes = self.adapt_slanet_plus(img, pred_bboxes)
         pred_html = self.table_matcher(pred_structures, pred_bboxes, dt_boxes, rec_res)
-
+        # 避免低版本升级后出现问题,默认不打开
+        if return_logic_points:
+            logic_points = self.table_matcher.decode_logic_points(pred_structures)
+            elapse = time.time() - s
+            return pred_html, pred_bboxes, logic_points, elapse
         elapse = time.time() - s
         return pred_html, pred_bboxes, elapse
 
