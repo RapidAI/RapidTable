@@ -156,3 +156,6 @@ long1.jpg
 *.pdmodel
 
 .DS_Store
+*.pth
+/rapid_table_torch/models/*.pth
+/rapid_table_torch/models/*.json
