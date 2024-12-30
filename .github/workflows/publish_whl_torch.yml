@@ -1,4 +1,4 @@
-name: Push rapidocr_table to pypi
+name: Push rapidocr_table_torch to pypi
 
 on:
   push:
@@ -27,12 +27,6 @@ jobs:
 
       - name: Unit testings
         run: |
-          wget $RESOURCES_URL
-          ZIP_NAME=${RESOURCES_URL##*/}
-          DIR_NAME=${ZIP_NAME%.*}
-          unzip $DIR_NAME
-          cp $DIR_NAME/*.pth rapid_table_torch/models/
-          cp $DIR_NAME/*.json rapid_table_torch/models/
           pip install -r requirements_torch.txt
           pip install rapidocr_onnxruntime
           pip install pytest
