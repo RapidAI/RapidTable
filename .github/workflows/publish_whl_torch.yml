@@ -50,7 +50,7 @@ jobs:
           pip install -r requirements_torch.txt
           python -m pip install --upgrade pip
           pip install wheel get_pypi_latest_version
-          python setup.py bdist_wheel ${{ github.ref_name }}
+          python setup_torch.py bdist_wheel ${{ github.ref_name }}
 
       - name: Publish distribution 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@v1.5.0
