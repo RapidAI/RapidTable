@@ -1,5 +1,6 @@
 import re
 import time
+from typing import Dict, Any
 
 import cv2
 import numpy as np
@@ -7,7 +8,7 @@ import torch
 from PIL import Image
 from tokenizers import Tokenizer
 
-from .components import Encoder, GPTFastDecoder
+from .unitable_modules import Encoder, GPTFastDecoder
 from torchvision import transforms
 
 IMG_SIZE = 448
@@ -77,8 +78,14 @@ TASK_TOKENS = [
 ]
 
 
-class TableStructurer:
-    def __init__(self, encoder_path: str, decoder_path: str, vocab_path: str, device: str):
+class TableStructureUnitable:
+    def __init__(self, config:Dict[str, Any]):
+        # encoder_path: str, decoder_path: str, vocab_path: str, device: str
+        vocab_path = config["vocab_path"]
+        encoder_path = config["encoder_path"]
+        decoder_path = config["decoder_path"]
+        device = config.get("device", "cuda:0") if config["use_cuda"] else "cpu"
+
         self.vocab = Tokenizer.from_file(vocab_path)
         self.token_white_list = [self.vocab.token_to_id(i) for i in VALID_HTML_BBOX_TOKENS]
         self.bbox_token_ids = set([self.vocab.token_to_id(i) for i in BBOX_TOKENS])

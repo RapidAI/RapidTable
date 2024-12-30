@@ -5,33 +5,34 @@ import argparse
 import copy
 import importlib
 import time
+from dataclasses import asdict
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 import cv2
 import numpy as np
 
+from .download_model import DownloadModel
+from .params import accept_kwargs_as_dataclass, BaseConfig
 from .table_matcher import TableMatch
-from .table_structure import TableStructurer
+from .table_structure import TableStructurer, TableStructureUnitable
 from .utils import LoadImage, VisTable
 
 root_dir = Path(__file__).resolve().parent
 
 
 class RapidTable:
-    def __init__(self, model_path: Optional[str] = None, model_type: str = None, use_cuda: bool = False):
-        if model_path is None:
-            model_path = str(
-                root_dir / "models" / "slanet-plus.onnx"
-            )
-            model_type = "slanet-plus"
-        self.model_type = model_type
+    @accept_kwargs_as_dataclass(BaseConfig)
+    def __init__(self, config: BaseConfig):
+        self.model_type = config.model_type
         self.load_img = LoadImage()
-        config = {
-            "model_path": model_path,
-            "use_cuda": use_cuda,
-        }
-        self.table_structure = TableStructurer(config)
+        if self.model_type == "unitable":
+            config.encoder_path = DownloadModel.get_model_path(self.model_type, "encoder", config.encoder_path)
+            config.decoder_path = DownloadModel.get_model_path(self.model_type, "decoder", config.decoder_path)
+            config.vocab_path = DownloadModel.get_model_path(self.model_type, "vocab", config.vocab_path)
+            self.table_structure = TableStructureUnitable(asdict(config))
+        else:
+            self.table_structure = TableStructurer(asdict(config))
         self.table_matcher = TableMatch()
 
         try:

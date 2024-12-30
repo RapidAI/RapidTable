@@ -10,10 +10,32 @@ from .logger import get_logger
 logger = get_logger("DownloadModel")
 CUR_DIR = Path(__file__).resolve()
 PROJECT_DIR = CUR_DIR.parent
-
+ROOT_URL = "https://www.modelscope.cn/studio/jockerK/TableRec/resolve/master/models/table_rec/unitable/"
+KEY_TO_MODEL_URL = {
+    "unitable": {
+        "encoder": f"{ROOT_URL}/encoder.pth",
+        "decoder": f"{ROOT_URL}/decoder.pth",
+        "vocab": f"{ROOT_URL}/vocab.json",
+    }
+}
 
 class DownloadModel:
     cur_dir = PROJECT_DIR
+
+    @staticmethod
+    def get_model_path(model_type: str, sub_file_type: str, path: Union[str, Path, None]) -> str:
+        if path is not None:
+            return path
+
+        model_url = KEY_TO_MODEL_URL.get(model_type, {}).get(sub_file_type, None)
+        if model_url:
+            model_path = DownloadModel.download(model_url)
+            return model_path
+
+        logger.info(
+            "model url is None, using the default download model %s", path
+        )
+        return path
 
     @classmethod
     def download(cls, model_full_url: Union[str, Path]) -> str:

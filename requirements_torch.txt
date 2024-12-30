@@ -1,8 +1,0 @@
-onnxruntime>=1.7.0
-opencv_python>=4.5.1.48
-numpy>=1.21.6,<2
-Pillow
-requests
-torch
-torchvision
-tokenizers

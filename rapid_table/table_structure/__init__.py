@@ -12,3 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from .table_structure import TableStructurer
+from .table_structure_unitable import TableStructureUnitable

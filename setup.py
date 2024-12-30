@@ -66,4 +66,5 @@ setuptools.setup(
     ],
     python_requires=">=3.6,<3.13",
     entry_points={"console_scripts": [f"{MODULE_NAME}={MODULE_NAME}.main:main"]},
+    extras_require={"torch": ["torch", "torchvision", "tokenizers"]},
 )
