@@ -122,7 +122,6 @@ table_engine = RapidTable()
 
 完整示例：
 
-#### onnx版本
 ```python
 from pathlib import Path
 
