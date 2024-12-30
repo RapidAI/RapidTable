@@ -65,6 +65,9 @@ class RapidTable:
         if self.model_type == "slanet-plus":
             pred_bboxes = self.adapt_slanet_plus(img, pred_bboxes)
         pred_html = self.table_matcher(pred_structures, pred_bboxes, dt_boxes, rec_res)
+        # 过滤掉占位的bbox
+        mask = ~np.all(pred_bboxes == 0, axis=1)
+        pred_bboxes = pred_bboxes[mask]
         # 避免低版本升级后出现问题,默认不打开
         if return_logic_points:
             logic_points = self.table_matcher.decode_logic_points(pred_structures)

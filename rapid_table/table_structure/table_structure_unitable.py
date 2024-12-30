@@ -183,8 +183,8 @@ class TableStructureUnitable:
                 td_attrs = td_match.group(1).strip()
                 td_content = td_match.group(2).strip()
                 if td_attrs:
-                    decoded_list.append('<td ')
-                    decoded_list.append(td_attrs)
+                    decoded_list.append('<td')
+                    decoded_list.append(" " + td_attrs)
                     decoded_list.append('>')
                     decoded_list.append('</td>')
                 else:
@@ -197,7 +197,9 @@ class TableStructureUnitable:
                     # 将坐标转换为从左上角开始顺时针到左下角的点的坐标
                     coords = np.array([xmin, ymin, xmax, ymin, xmax, ymax, xmin, ymax])
                     bbox_coords.append(coords)
-
+                else:
+                    # 填充占位的bbox，保证后续流程统一
+                    bbox_coords.append(np.array([0, 0, 0,0,0,0, 0, 0]))
             decoded_list.append('</tr>')
 
         # 将 bbox_coords 转换为 numpy 数组
