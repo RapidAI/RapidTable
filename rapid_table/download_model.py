@@ -19,11 +19,14 @@ KEY_TO_MODEL_URL = {
     }
 }
 
+
 class DownloadModel:
     cur_dir = PROJECT_DIR
 
     @staticmethod
-    def get_model_path(model_type: str, sub_file_type: str, path: Union[str, Path, None]) -> str:
+    def get_model_path(
+        model_type: str, sub_file_type: str, path: Union[str, Path, None]
+    ) -> str:
         if path is not None:
             return path
 
@@ -32,9 +35,7 @@ class DownloadModel:
             model_path = DownloadModel.download(model_url)
             return model_path
 
-        logger.info(
-            "model url is None, using the default download model %s", path
-        )
+        logger.info("model url is None, using the default download model %s", path)
         return path
 
     @classmethod

@@ -17,12 +17,11 @@
 import os
 import platform
 import traceback
-
-import cv2
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
+import cv2
 import numpy as np
 from onnxruntime import (
     GraphOptimizationLevel,
@@ -79,10 +78,12 @@ class OrtInferSession:
             sess_opt.inter_op_num_threads = inter_op_num_threads
 
         return sess_opt
+
     def get_metadata(self, key: str = "character") -> list:
         meta_dict = self.session.get_modelmeta().custom_metadata_map
         content_list = meta_dict[key].splitlines()
         return content_list
+
     def _get_ep_list(self) -> List[Tuple[str, Dict[str, Any]]]:
         cpu_provider_opts = {
             "arena_extend_strategy": "kSameAsRequested",

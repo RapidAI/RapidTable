@@ -29,7 +29,7 @@ class TableMatch:
         pred_html, pred = self.get_pred_html(pred_structures, matched_index, rec_res)
         return pred_html
 
-    def match_result(self, dt_boxes, pred_bboxes, min_iou=0.1 ** 8):
+    def match_result(self, dt_boxes, pred_bboxes, min_iou=0.1**8):
         matched = {}
         for i, gt_box in enumerate(dt_boxes):
             distances = []
@@ -52,7 +52,8 @@ class TableMatch:
             # must > min_iou
             if sorted_distances[0][1] >= 1 - min_iou:
                 continue
-            if distances.index(sorted_distances[0]) not in matched.keys():
+
+            if distances.index(sorted_distances[0]) not in matched:
                 matched[distances.index(sorted_distances[0])] = [i]
             else:
                 matched[distances.index(sorted_distances[0])].append(i)
@@ -114,6 +115,7 @@ class TableMatch:
         filter_elements = ["<thead>", "</thead>", "<tbody>", "</tbody>"]
         end_html = [v for v in end_html if v not in filter_elements]
         return "".join(end_html), end_html
+
     def decode_logic_points(self, pred_structures):
         logic_points = []
         current_row = 0
@@ -134,22 +136,24 @@ class TableMatch:
         while i < len(pred_structures):
             token = pred_structures[i]
 
-            if token == '<tr>':
+            if token == "<tr>":
                 current_col = 0  # 每次遇到 <tr> 时，重置当前列号
-            elif token == '</tr>':
+            elif token == "</tr>":
                 current_row += 1  # 行结束，行号增加
-            elif token .startswith('<td'):
+            elif token.startswith("<td"):
                 colspan = 1
                 rowspan = 1
                 j = i
-                if token != '<td></td>':
+                if token != "<td></td>":
                     j += 1
                     # 提取 colspan 和 rowspan 属性
-                    while j < len(pred_structures) and not pred_structures[j].startswith('>'):
-                        if 'colspan=' in pred_structures[j]:
-                            colspan = int(pred_structures[j].split('=')[1].strip('"\''))
-                        elif 'rowspan=' in pred_structures[j]:
-                            rowspan = int(pred_structures[j].split('=')[1].strip('"\''))
+                    while j < len(pred_structures) and not pred_structures[
+                        j
+                    ].startswith(">"):
+                        if "colspan=" in pred_structures[j]:
+                            colspan = int(pred_structures[j].split("=")[1].strip("\"'"))
+                        elif "rowspan=" in pred_structures[j]:
+                            rowspan = int(pred_structures[j].split("=")[1].strip("\"'"))
                         j += 1
 
                 # 跳过已经处理过的属性 token

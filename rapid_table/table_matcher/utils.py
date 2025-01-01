@@ -14,6 +14,7 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
+import copy
 import re
 
 
@@ -48,7 +49,7 @@ def deal_isolate_span(thead_part):
         spanStr_in_isolateItem = span_part.group()
         # 3. merge the span number into the span token format string.
         if spanStr_in_isolateItem is not None:
-            corrected_item = "<td{}></td>".format(spanStr_in_isolateItem)
+            corrected_item = f"<td{spanStr_in_isolateItem}></td>"
             corrected_list.append(corrected_item)
         else:
             corrected_list.append(None)
@@ -243,6 +244,6 @@ def compute_iou(rec1, rec2):
     # judge if there is an intersect
     if left_line >= right_line or top_line >= bottom_line:
         return 0.0
-    else:
-        intersect = (right_line - left_line) * (bottom_line - top_line)
-        return (intersect / (sum_area - intersect)) * 1.0
+
+    intersect = (right_line - left_line) * (bottom_line - top_line)
+    return (intersect / (sum_area - intersect)) * 1.0

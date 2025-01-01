@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 
 from .download_model import DownloadModel
-from .params import accept_kwargs_as_dataclass, BaseConfig
+from .params import BaseConfig, accept_kwargs_as_dataclass
 from .table_matcher import TableMatch
 from .table_structure import TableStructurer, TableStructureUnitable
 from .utils import LoadImage, VisTable
@@ -26,13 +26,21 @@ class RapidTable:
     def __init__(self, config: BaseConfig):
         self.model_type = config.model_type
         self.load_img = LoadImage()
+
         if self.model_type == "unitable":
-            config.encoder_path = DownloadModel.get_model_path(self.model_type, "encoder", config.encoder_path)
-            config.decoder_path = DownloadModel.get_model_path(self.model_type, "decoder", config.decoder_path)
-            config.vocab_path = DownloadModel.get_model_path(self.model_type, "vocab", config.vocab_path)
+            config.encoder_path = DownloadModel.get_model_path(
+                self.model_type, "encoder", config.encoder_path
+            )
+            config.decoder_path = DownloadModel.get_model_path(
+                self.model_type, "decoder", config.decoder_path
+            )
+            config.vocab_path = DownloadModel.get_model_path(
+                self.model_type, "vocab", config.vocab_path
+            )
             self.table_structure = TableStructureUnitable(asdict(config))
         else:
             self.table_structure = TableStructurer(asdict(config))
+
         self.table_matcher = TableMatch()
 
         try:
@@ -44,7 +52,7 @@ class RapidTable:
         self,
         img_content: Union[str, np.ndarray, bytes, Path],
         ocr_result: List[Union[List[List[float]], str, str]] = None,
-        return_logic_points = False
+        return_logic_points=False,
     ) -> Tuple[str, float]:
         if self.ocr_engine is None and ocr_result is None:
             raise ValueError(
@@ -65,14 +73,17 @@ class RapidTable:
         if self.model_type == "slanet-plus":
             pred_bboxes = self.adapt_slanet_plus(img, pred_bboxes)
         pred_html = self.table_matcher(pred_structures, pred_bboxes, dt_boxes, rec_res)
+
         # 过滤掉占位的bbox
         mask = ~np.all(pred_bboxes == 0, axis=1)
         pred_bboxes = pred_bboxes[mask]
+
         # 避免低版本升级后出现问题,默认不打开
         if return_logic_points:
             logic_points = self.table_matcher.decode_logic_points(pred_structures)
             elapse = time.time() - s
             return pred_html, pred_bboxes, logic_points, elapse
+
         elapse = time.time() - s
         return pred_html, pred_bboxes, elapse
 
@@ -93,6 +104,7 @@ class RapidTable:
             r_boxes.append(box)
         dt_boxes = np.array(r_boxes)
         return dt_boxes, rec_res
+
     def adapt_slanet_plus(self, img: np.ndarray, pred_bboxes: np.ndarray) -> np.ndarray:
         h, w = img.shape[:2]
         resized = 488
@@ -102,6 +114,7 @@ class RapidTable:
         pred_bboxes[:, 0::2] *= w_ratio
         pred_bboxes[:, 1::2] *= h_ratio
         return pred_bboxes
+
 
 def main():
     parser = argparse.ArgumentParser()

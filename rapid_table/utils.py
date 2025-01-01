@@ -4,7 +4,7 @@
 import os
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 import cv2
 import numpy as np
@@ -14,9 +14,7 @@ InputType = Union[str, np.ndarray, bytes, Path]
 
 
 class LoadImage:
-    def __init__(
-            self,
-    ):
+    def __init__(self):
         pass
 
     def __call__(self, img: InputType) -> np.ndarray:
@@ -79,20 +77,18 @@ class LoadImageError(Exception):
 
 
 class VisTable:
-    def __init__(
-            self,
-    ):
+    def __init__(self):
         self.load_img = LoadImage()
 
     def __call__(
-            self,
-            img_path: Union[str, Path],
-            table_html_str: str,
-            save_html_path: Optional[str] = None,
-            table_cell_bboxes: Optional[np.ndarray] = None,
-            save_drawed_path: Optional[str] = None,
-            logic_points: List[List[float]] = None,
-            save_logic_path: Optional[str] = None,
+        self,
+        img_path: Union[str, Path],
+        table_html_str: str,
+        save_html_path: Optional[str] = None,
+        table_cell_bboxes: Optional[np.ndarray] = None,
+        save_drawed_path: Optional[str] = None,
+        logic_points: List[List[float]] = None,
+        save_logic_path: Optional[str] = None,
     ) -> None:
         if save_html_path:
             html_with_border = self.insert_border_style(table_html_str)
@@ -114,8 +110,10 @@ class VisTable:
         if save_drawed_path:
             self.save_img(save_drawed_path, drawed_img)
         if save_logic_path and logic_points:
-            polygons = [[box[0],box[1], box[4], box[5]] for box in table_cell_bboxes]
-            self.plot_rec_box_with_logic_info(img_path, save_logic_path, logic_points, polygons)
+            polygons = [[box[0], box[1], box[4], box[5]] for box in table_cell_bboxes]
+            self.plot_rec_box_with_logic_info(
+                img_path, save_logic_path, logic_points, polygons
+            )
         return drawed_img
 
     def insert_border_style(self, table_html_str: str):
@@ -137,7 +135,9 @@ class VisTable:
         html_with_border = f"{prefix_table}{style_res}<body>{suffix_table}"
         return html_with_border
 
-    def plot_rec_box_with_logic_info(self, img_path, output_path, logic_points, sorted_polygons):
+    def plot_rec_box_with_logic_info(
+        self, img_path, output_path, logic_points, sorted_polygons
+    ):
         """
         :param img_path
         :param output_path
@@ -208,4 +208,3 @@ class VisTable:
     def save_html(save_path: Union[str, Path], html: str):
         with open(save_path, "w", encoding="utf-8") as f:
             f.write(html)
-
