@@ -105,8 +105,8 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 ```bash
 pip install rapidocr_onnxruntime
 pip install rapid_table
-#pip install rapid_table_torch # for unitable inference 
-#pip install onnxruntime-gpu # for gpu inference
+#pip install rapid_table[torch] # for unitable inference 
+#pip install onnxruntime-gpu # for onnx gpu inference
 ```
 
 ### 使用方式
@@ -117,11 +117,11 @@ RapidTable类提供model_path参数，可以自行指定上述2个模型，默�
 
 ```python
 table_engine = RapidTable()
+# table_engine = RapidTable(use_cuda=True, device="cuda:0", model_type="unitable")
 ```
 
 完整示例：
 
-#### onnx版本
 ```python
 from pathlib import Path
 
@@ -132,6 +132,8 @@ from rapid_table.table_structure.utils import trans_char_ocr_res
 table_engine = RapidTable()
 # 开启onnx-gpu推理
 # table_engine = RapidTable(use_cuda=True)
+# 使用torch推理版本的unitable模型
+# table_engine = RapidTable(use_cuda=True, device="cuda:0", model_type="unitable")
 ocr_engine = RapidOCR()
 viser = VisTable()
 
@@ -159,41 +161,8 @@ viser(img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_p
 print(table_html_str)
 ```
 
-#### torch版本
-```python
-from pathlib import Path
-from rapidocr_onnxruntime import RapidOCR
-
-from rapid_table_torch import RapidTable, VisTable
-from rapid_table_torch.table_structure.utils import trans_char_ocr_res
-
-if __name__ == '__main__':
-# Init
-ocr_engine = RapidOCR()
-table_engine = RapidTable(device="cpu") # 默认使用cpu，若使用cuda，则传入device="cuda:0"
-viser = VisTable()
-img_path = "tests/test_files/image34.png"
-# OCR,本模型检测框比较精准，配合单字匹配效果更好
-ocr_result, _ = ocr_engine(img_path, return_word_box=True)
-ocr_result = trans_char_ocr_res(ocr_result)
-boxes, txts, scores = list(zip(*ocr_result))
-# Save
-save_dir = Path("outputs")
-save_dir.mkdir(parents=True, exist_ok=True)
-
-save_html_path = save_dir / f"{Path(img_path).stem}.html"
-save_drawed_path = save_dir / f"{Path(img_path).stem}_table_vis{Path(img_path).suffix}"
-# 返回逻辑坐标
-table_html_str, table_cell_bboxes, logic_points, elapse = table_engine(img_path, ocr_result)
-save_logic_path = save_dir / f"vis_logic_{Path(img_path).name}"
-vis_imged = viser(img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_path, logic_points,
-                  save_logic_path)
-print(f"elapse:{elapse}")
-```
-
 #### 终端运行
 
-##### onnx:
 - 用法:
 
   ```bash
@@ -214,29 +183,7 @@ print(f"elapse:{elapse}")
   ```bash
   rapid_table -v -img test_images/table.jpg
   ```
-
-##### pytorch:
-- 用法:
-
-  ```bash
-  $ rapid_table_torch -h
-  usage: rapid_table_torch [-h] [-v] -img IMG_PATH [-d DEVICE]
-
-  optional arguments:
-  -h, --help            show this help message and exit
-  -v, --vis             Whether to visualize the layout results.
-  -img IMG_PATH, --img_path IMG_PATH
-                        Path to image for layout.
-  -d DEVICE, --device device
-                        The model device used for inference.
-  ```
-
-- 示例:
-
-  ```bash
-  rapid_table_torch -v -img test_images/table.jpg
-  ```
-
+  
 ### 结果
 
 #### 返回结果

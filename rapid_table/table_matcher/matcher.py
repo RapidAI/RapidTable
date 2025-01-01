@@ -29,7 +29,7 @@ class TableMatch:
         pred_html, pred = self.get_pred_html(pred_structures, matched_index, rec_res)
         return pred_html
 
-    def match_result(self, dt_boxes, pred_bboxes):
+    def match_result(self, dt_boxes, pred_bboxes, min_iou=0.1 ** 8):
         matched = {}
         for i, gt_box in enumerate(dt_boxes):
             distances = []
@@ -49,6 +49,9 @@ class TableMatch:
             sorted_distances = sorted(
                 sorted_distances, key=lambda item: (item[1], item[0])
             )
+            # must > min_iou
+            if sorted_distances[0][1] >= 1 - min_iou:
+                continue
             if distances.index(sorted_distances[0]) not in matched.keys():
                 matched[distances.index(sorted_distances[0])] = [i]
             else:

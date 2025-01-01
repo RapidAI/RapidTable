@@ -208,3 +208,4 @@ class VisTable:
     def save_html(save_path: Union[str, Path], html: str):
         with open(save_path, "w", encoding="utf-8") as f:
             f.write(html)
+
