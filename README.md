@@ -60,8 +60,13 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 ```bash
 pip install rapidocr_onnxruntime
 pip install rapid_table
-# pip install rapid_table[torch] # for unitable inference
-# pip install onnxruntime-gpu # for onnx gpu inference
+
+# 基于torch来推理unitable模型
+pip install rapid_table[torch] # for unitable inference
+
+# onnxruntime-gpu推理
+pip uninstall onnxruntime
+pip install onnxruntime-gpu # for onnx gpu inference
 ```
 
 ### 使用方式
