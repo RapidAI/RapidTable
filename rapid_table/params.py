@@ -1,11 +1,21 @@
+# -*- encoding: utf-8 -*-
 from dataclasses import dataclass, fields
 from functools import wraps
 from pathlib import Path
+from typing import Optional, Union
 
 from rapid_table.logger import get_logger
 
 root_dir = Path(__file__).resolve().parent
 logger = get_logger("params")
+
+
+@dataclass
+class RapidTableInput:
+    model_type: Optional[str] = None
+    model_path_or_dir: Union[str, Path, None] = None
+    use_cuda: bool = False
+    device: str = "cpu"
 
 
 @dataclass

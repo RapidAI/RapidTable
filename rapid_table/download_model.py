@@ -8,16 +8,9 @@ from tqdm import tqdm
 from .logger import get_logger
 
 logger = get_logger("DownloadModel")
+
 CUR_DIR = Path(__file__).resolve()
 PROJECT_DIR = CUR_DIR.parent
-ROOT_URL = "https://www.modelscope.cn/studio/jockerK/TableRec/resolve/master/models/table_rec/unitable/"
-KEY_TO_MODEL_URL = {
-    "unitable": {
-        "encoder": f"{ROOT_URL}/encoder.pth",
-        "decoder": f"{ROOT_URL}/decoder.pth",
-        "vocab": f"{ROOT_URL}/vocab.json",
-    }
-}
 
 
 class DownloadModel:

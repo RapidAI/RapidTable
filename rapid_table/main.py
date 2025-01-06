@@ -5,25 +5,43 @@ import argparse
 import copy
 import importlib
 import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 
 from .download_model import DownloadModel
-from .params import BaseConfig, accept_kwargs_as_dataclass
 from .table_matcher import TableMatch
 from .table_structure import TableStructurer, TableStructureUnitable
 from .utils import LoadImage, VisTable
 
 root_dir = Path(__file__).resolve().parent
 
+ROOT_URL = "https://www.modelscope.cn/models/RapidAI-NG/RapidTable/resolve/master/"
+KEY_TO_MODEL_URL = {
+    "ppstructure_en": f"{ROOT_URL}/en_ppstructure_mobile_v2_SLANet.onnx",
+    "ppstructure_zh": f"{ROOT_URL}/ch_ppstructure_mobile_v2_SLANet.onnx",
+    "slanet_plus": f"{ROOT_URL}/slanet-plus.onnx",
+    "unitable": {
+        "encoder": f"{ROOT_URL}/unitable/encoder.pth",
+        "decoder": f"{ROOT_URL}/unitable/decoder.pth",
+        "vocab": f"{ROOT_URL}/unitable/vocab.json",
+    },
+}
+
+
+@dataclass
+class RapidTableInput:
+    model_type: Optional[str] = None
+    model_path_or_dir: Union[str, Path, None] = None
+    use_cuda: bool = False
+    device: str = "cpu"
+
 
 class RapidTable:
-    @accept_kwargs_as_dataclass(BaseConfig)
-    def __init__(self, config: BaseConfig):
+    def __init__(self, config: RapidTableInput):
         self.model_type = config.model_type
         self.load_img = LoadImage()
 
@@ -52,7 +70,7 @@ class RapidTable:
         self,
         img_content: Union[str, np.ndarray, bytes, Path],
         ocr_result: List[Union[List[List[float]], str, str]] = None,
-        return_logic_points=False,
+        return_logic_points: bool = False,
     ) -> Tuple[str, float]:
         if self.ocr_engine is None and ocr_result is None:
             raise ValueError(
@@ -69,9 +87,11 @@ class RapidTable:
         dt_boxes, rec_res = self.get_boxes_recs(ocr_result, h, w)
 
         pred_structures, pred_bboxes, _ = self.table_structure(copy.deepcopy(img))
+
         # 适配slanet-plus模型输出的box缩放还原
         if self.model_type == "slanet-plus":
             pred_bboxes = self.adapt_slanet_plus(img, pred_bboxes)
+
         pred_html = self.table_matcher(pred_structures, pred_bboxes, dt_boxes, rec_res)
 
         # 过滤掉占位的bbox

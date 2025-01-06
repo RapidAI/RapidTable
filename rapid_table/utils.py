@@ -117,20 +117,21 @@ class VisTable:
         return drawed_img
 
     def insert_border_style(self, table_html_str: str):
-        style_res = f"""<meta charset="UTF-8"><style>
-        table {{
+        style_res = """<meta charset="UTF-8"><style>
+        table {
             border-collapse: collapse;
             width: 100%;
-        }}
-        th, td {{
+        }
+        th, td {
             border: 1px solid black;
             padding: 8px;
             text-align: center;
-        }}
-        th {{
+        }
+        th {
             background-color: #f2f2f2;
-        }}
+        }
                     </style>"""
+
         prefix_table, suffix_table = table_html_str.split("<body>")
         html_with_border = f"{prefix_table}{style_res}<body>{suffix_table}"
         return html_with_border

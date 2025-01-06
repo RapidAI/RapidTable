@@ -30,6 +30,9 @@ def test_input_ocr_none():
     table_html_str, table_cell_bboxes, elapse = table_engine(img_path)
     assert table_html_str.count("<tr>") == 16
 
+
 def test_logic_points_out():
-    table_html_str, table_cell_bboxes, logic_points, elapse = table_engine(img_path, return_logic_points=True)
+    table_html_str, table_cell_bboxes, logic_points, elapse = table_engine(
+        img_path, return_logic_points=True
+    )
     assert len(table_cell_bboxes) == len(logic_points)
