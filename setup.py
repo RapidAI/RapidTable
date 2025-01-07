@@ -3,9 +3,16 @@
 # @Contact: liekkaskono@163.com
 import sys
 from pathlib import Path
+from typing import List, Union
 
 import setuptools
 from get_pypi_latest_version import GetPyPiLatestVersion
+
+
+def read_txt(txt_path: Union[Path, str]) -> List[str]:
+    with open(txt_path, "r", encoding="utf-8") as f:
+        data = [v.rstrip("\n") for v in f]
+    return data
 
 
 def get_readme():
@@ -34,19 +41,13 @@ setuptools.setup(
     platforms="Any",
     long_description=get_readme(),
     long_description_content_type="text/markdown",
-    description="Tools for parsing table structures based ONNXRuntime.",
+    description="Table Recognition",
     author="SWHL",
     author_email="liekkaskono@163.com",
-    url="https://github.com/RapidAI/RapidStructure",
+    url="https://github.com/RapidAI/RapidTable",
     license="Apache-2.0",
     include_package_data=True,
-    install_requires=[
-        "onnxruntime>=1.7.0",
-        "PyYAML>=6.0",
-        "opencv_python>=4.5.1.48",
-        "numpy>=1.21.6",
-        "Pillow",
-    ],
+    install_requires=read_txt("requirements.txt"),
     packages=[
         MODULE_NAME,
         f"{MODULE_NAME}.models",

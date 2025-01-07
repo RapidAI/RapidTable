@@ -1,6 +1,5 @@
 import re
 import time
-from typing import Any, Dict
 
 import cv2
 import numpy as np
@@ -79,11 +78,11 @@ TASK_TOKENS = [
 
 
 class TableStructureUnitable:
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config):
         # encoder_path: str, decoder_path: str, vocab_path: str, device: str
-        vocab_path = config["vocab_path"]
-        encoder_path = config["encoder_path"]
-        decoder_path = config["decoder_path"]
+        vocab_path = config["model_path"]["vocab"]
+        encoder_path = config["model_path"]["encoder"]
+        decoder_path = config["model_path"]["decoder"]
         device = config.get("device", "cuda:0") if config["use_cuda"] else "cpu"
 
         self.vocab = Tokenizer.from_file(vocab_path)

@@ -31,7 +31,7 @@ from onnxruntime import (
     get_device,
 )
 
-from rapid_table.table_structure.logger import get_logger
+from rapid_table.logger import get_logger
 
 
 class EP(Enum):

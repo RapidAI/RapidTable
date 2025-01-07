@@ -9,13 +9,11 @@ from .logger import get_logger
 
 logger = get_logger("DownloadModel")
 
-CUR_DIR = Path(__file__).resolve()
-PROJECT_DIR = CUR_DIR.parent
+PROJECT_DIR = Path(__file__).resolve().parent
+DEFAULT_MODEL_DIR = PROJECT_DIR / "models"
 
 
 class DownloadModel:
-    cur_dir = PROJECT_DIR
-
     @staticmethod
     def get_model_path(
         model_type: str, sub_file_type: str, path: Union[str, Path, None]
@@ -32,19 +30,28 @@ class DownloadModel:
         return path
 
     @classmethod
-    def download(cls, model_full_url: Union[str, Path]) -> str:
-        save_dir = cls.cur_dir / "models"
+    def download(
+        cls,
+        model_full_url: Union[str, Path],
+        save_dir: Union[str, Path, None] = None,
+        save_model_name: Optional[str] = None,
+    ) -> str:
+        if save_dir is None:
+            save_dir = DEFAULT_MODEL_DIR
+
         save_dir.mkdir(parents=True, exist_ok=True)
 
-        model_name = Path(model_full_url).name
-        save_file_path = save_dir / model_name
+        if save_model_name is None:
+            save_model_name = Path(model_full_url).name
+
+        save_file_path = save_dir / save_model_name
         if save_file_path.exists():
             logger.debug("%s already exists", save_file_path)
             return str(save_file_path)
 
         try:
             logger.info("Download %s to %s", model_full_url, save_dir)
-            file = cls.download_as_bytes_with_progress(model_full_url, model_name)
+            file = cls.download_as_bytes_with_progress(model_full_url, save_model_name)
             cls.save_file(save_file_path, file)
         except Exception as exc:
             raise DownloadModelError from exc

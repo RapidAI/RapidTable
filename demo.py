@@ -6,12 +6,14 @@ from pathlib import Path
 import cv2
 from rapidocr_onnxruntime import RapidOCR, VisRes
 
-from rapid_table import RapidTable, VisTable
+from rapid_table import RapidTable, RapidTableInput, VisTable
 
 # Init
 ocr_engine = RapidOCR()
 vis_ocr = VisRes()
-table_engine = RapidTable()
+
+input_args = RapidTableInput(model_type="unitable")
+table_engine = RapidTable(input_args)
 viser = VisTable()
 
 img_path = "tests/test_files/table.jpg"
@@ -21,7 +23,8 @@ ocr_result, _ = ocr_engine(img_path)
 boxes, txts, scores = list(zip(*ocr_result))
 
 # Table Rec
-table_html_str, table_cell_bboxes, _ = table_engine(img_path, ocr_result)
+table_results = table_engine(img_path, ocr_result)
+table_html_str, table_cell_bboxes = table_results.pred_html, table_results.pred_bboxes
 
 # Save
 save_dir = Path("outputs")

@@ -6,25 +6,37 @@ import copy
 import importlib
 import time
 from dataclasses import asdict, dataclass
+from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
+
+from rapid_table.logger import get_logger
 
 from .download_model import DownloadModel
 from .table_matcher import TableMatch
 from .table_structure import TableStructurer, TableStructureUnitable
 from .utils import LoadImage, VisTable
 
+logger = get_logger("main")
 root_dir = Path(__file__).resolve().parent
+
+
+class ModelType(Enum):
+    PPSTRUCTURE_EN = "ppstructure_en"
+    PPSTRUCTURE_ZH = "ppstructure_zh"
+    SLANETPLUS = "slanet_plus"
+    UNITABLE = "unitable"
+
 
 ROOT_URL = "https://www.modelscope.cn/models/RapidAI-NG/RapidTable/resolve/master/"
 KEY_TO_MODEL_URL = {
-    "ppstructure_en": f"{ROOT_URL}/en_ppstructure_mobile_v2_SLANet.onnx",
-    "ppstructure_zh": f"{ROOT_URL}/ch_ppstructure_mobile_v2_SLANet.onnx",
-    "slanet_plus": f"{ROOT_URL}/slanet-plus.onnx",
-    "unitable": {
+    ModelType.PPSTRUCTURE_EN.value: f"{ROOT_URL}/en_ppstructure_mobile_v2_SLANet.onnx",
+    ModelType.PPSTRUCTURE_ZH.value: f"{ROOT_URL}/ch_ppstructure_mobile_v2_SLANet.onnx",
+    ModelType.SLANETPLUS.value: f"{ROOT_URL}/slanet-plus.onnx",
+    ModelType.UNITABLE.value: {
         "encoder": f"{ROOT_URL}/unitable/encoder.pth",
         "decoder": f"{ROOT_URL}/unitable/decoder.pth",
         "vocab": f"{ROOT_URL}/unitable/vocab.json",
@@ -34,27 +46,32 @@ KEY_TO_MODEL_URL = {
 
 @dataclass
 class RapidTableInput:
-    model_type: Optional[str] = None
-    model_path_or_dir: Union[str, Path, None] = None
+    model_type: Optional[str] = ModelType.SLANETPLUS.value
+    model_path: Union[str, Path, None, Dict[str, str]] = None
     use_cuda: bool = False
     device: str = "cpu"
+
+
+@dataclass
+class RapidTableOutput:
+    pred_html: Optional[str] = None
+    pred_bboxes: Optional[np.ndarray] = None
+    logic_points: Optional[np.ndarray] = None
+    elapse: Optional[float] = None
 
 
 class RapidTable:
     def __init__(self, config: RapidTableInput):
         self.model_type = config.model_type
-        self.load_img = LoadImage()
 
-        if self.model_type == "unitable":
-            config.encoder_path = DownloadModel.get_model_path(
-                self.model_type, "encoder", config.encoder_path
+        if self.model_type not in KEY_TO_MODEL_URL:
+            model_list = ",".join(KEY_TO_MODEL_URL.keys())
+            raise ValueError(
+                f"{self.model_type} is not supported. The currently supported models are {model_list}."
             )
-            config.decoder_path = DownloadModel.get_model_path(
-                self.model_type, "decoder", config.decoder_path
-            )
-            config.vocab_path = DownloadModel.get_model_path(
-                self.model_type, "vocab", config.vocab_path
-            )
+
+        config.model_path = self.get_model_path(config.model_type, config.model_path)
+        if self.model_type == ModelType.UNITABLE.value:
             self.table_structure = TableStructureUnitable(asdict(config))
         else:
             self.table_structure = TableStructurer(asdict(config))
@@ -66,12 +83,14 @@ class RapidTable:
         except ModuleNotFoundError:
             self.ocr_engine = None
 
+        self.load_img = LoadImage()
+
     def __call__(
         self,
         img_content: Union[str, np.ndarray, bytes, Path],
         ocr_result: List[Union[List[List[float]], str, str]] = None,
         return_logic_points: bool = False,
-    ) -> Tuple[str, float]:
+    ) -> RapidTableOutput:
         if self.ocr_engine is None and ocr_result is None:
             raise ValueError(
                 "One of two conditions must be met: ocr_result is not empty, or rapidocr_onnxruntime is installed."
@@ -79,7 +98,7 @@ class RapidTable:
 
         img = self.load_img(img_content)
 
-        s = time.time()
+        s = time.perf_counter()
         h, w = img.shape[:2]
 
         if ocr_result is None:
@@ -89,7 +108,7 @@ class RapidTable:
         pred_structures, pred_bboxes, _ = self.table_structure(copy.deepcopy(img))
 
         # 适配slanet-plus模型输出的box缩放还原
-        if self.model_type == "slanet-plus":
+        if self.model_type == ModelType.SLANETPLUS.value:
             pred_bboxes = self.adapt_slanet_plus(img, pred_bboxes)
 
         pred_html = self.table_matcher(pred_structures, pred_bboxes, dt_boxes, rec_res)
@@ -101,11 +120,13 @@ class RapidTable:
         # 避免低版本升级后出现问题,默认不打开
         if return_logic_points:
             logic_points = self.table_matcher.decode_logic_points(pred_structures)
-            elapse = time.time() - s
-            return pred_html, pred_bboxes, logic_points, elapse
+            elapse = time.perf_counter() - s
+            return RapidTableOutput(pred_html, pred_bboxes, logic_points, elapse)
 
-        elapse = time.time() - s
-        return pred_html, pred_bboxes, elapse
+        elapse = time.perf_counter() - s
+        return RapidTableOutput(
+            pred_html=pred_html, pred_bboxes=pred_bboxes, elapse=elapse
+        )
 
     def get_boxes_recs(
         self, ocr_result: List[Union[List[List[float]], str, str]], h: int, w: int
@@ -134,6 +155,28 @@ class RapidTable:
         pred_bboxes[:, 0::2] *= w_ratio
         pred_bboxes[:, 1::2] *= h_ratio
         return pred_bboxes
+
+    @staticmethod
+    def get_model_path(
+        model_type: str, model_path: Union[str, Path, None]
+    ) -> Union[str, Dict[str, str]]:
+        if model_path is not None:
+            return model_path
+
+        model_url = KEY_TO_MODEL_URL.get(model_type, None)
+        if isinstance(model_url, str):
+            model_path = DownloadModel.download(model_url)
+            return model_path
+
+        if isinstance(model_url, dict):
+            model_paths = {}
+            for k, url in model_url.items():
+                model_paths[k] = DownloadModel.download(
+                    url, save_model_name=f"{model_type}_{Path(url).name}"
+                )
+            return model_paths
+
+        raise ValueError(f"Model URL: {type(model_url)} is not between str and dict.")
 
 
 def main():
