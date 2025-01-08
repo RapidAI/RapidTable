@@ -33,7 +33,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 [PaddleX-SlaNetPlus 表格识别](https://github.com/PaddlePaddle/PaddleX/blob/release/3.0-beta1/docs/module_usage/tutorials/ocr_modules/table_structure_recognition.md)\
 [Unitable](https://github.com/poloclub/unitable?tab=readme-ov-file)
 
-模型下载地址为：[link](https://github.com/RapidAI/RapidTable/releases/tag/assets)
+模型托管在modelscope上，具体下载地址为：[link](https://www.modelscope.cn/models/RapidAI-NG/RapidTable/files)
 
 ### 效果展示
 

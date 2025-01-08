@@ -13,12 +13,12 @@ from typing import Dict, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 
-from rapid_table.logger import get_logger
+from rapid_table.utils.download_model import DownloadModel
+from rapid_table.utils.logger import get_logger
+from rapid_table.utils.utils import LoadImage, VisTable
 
-from .download_model import DownloadModel
 from .table_matcher import TableMatch
 from .table_structure import TableStructurer, TableStructureUnitable
-from .utils import LoadImage, VisTable
 
 logger = get_logger("main")
 root_dir = Path(__file__).resolve().parent
@@ -63,9 +63,8 @@ class RapidTableOutput:
 class RapidTable:
     def __init__(self, config: RapidTableInput):
         self.model_type = config.model_type
-
         if self.model_type not in KEY_TO_MODEL_URL:
-            model_list = ",".join(KEY_TO_MODEL_URL.keys())
+            model_list = ",".join(KEY_TO_MODEL_URL)
             raise ValueError(
                 f"{self.model_type} is not supported. The currently supported models are {model_list}."
             )
@@ -185,6 +184,7 @@ def main():
         "-v",
         "--vis",
         action="store_true",
+        default=False,
         help="Wheter to visualize the layout results.",
     )
     parser.add_argument(
@@ -192,10 +192,10 @@ def main():
     )
     parser.add_argument(
         "-m",
-        "--model_path",
+        "--model_type",
         type=str,
-        default=str(root_dir / "models" / "en_ppstructure_mobile_v2_SLANet.onnx"),
-        help="The model path used for inference.",
+        default=ModelType.SLANETPLUS.value,
+        choices=list(KEY_TO_MODEL_URL),
     )
     args = parser.parse_args()
 
@@ -206,12 +206,16 @@ def main():
             "Please install the rapidocr_onnxruntime by pip install rapidocr_onnxruntime."
         ) from exc
 
-    rapid_table = RapidTable(args.model_path)
+    table_engine = RapidTable(args.model_path)
 
     img = cv2.imread(args.img_path)
 
     ocr_result, _ = ocr_engine(img)
-    table_html_str, table_cell_bboxes, elapse = rapid_table(img, ocr_result)
+    table_results = table_engine(img, ocr_result)
+    table_html_str, table_cell_bboxes = (
+        table_results.pred_html,
+        table_results.pred_bboxes,
+    )
     print(table_html_str)
 
     viser = VisTable()

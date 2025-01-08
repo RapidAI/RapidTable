@@ -14,21 +14,6 @@ DEFAULT_MODEL_DIR = PROJECT_DIR / "models"
 
 
 class DownloadModel:
-    @staticmethod
-    def get_model_path(
-        model_type: str, sub_file_type: str, path: Union[str, Path, None]
-    ) -> str:
-        if path is not None:
-            return path
-
-        model_url = KEY_TO_MODEL_URL.get(model_type, {}).get(sub_file_type, None)
-        if model_url:
-            model_path = DownloadModel.download(model_url)
-            return model_path
-
-        logger.info("model url is None, using the default download model %s", path)
-        return path
-
     @classmethod
     def download(
         cls,

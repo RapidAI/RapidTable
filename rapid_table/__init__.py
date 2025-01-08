@@ -2,4 +2,4 @@
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
 from .main import RapidTable, RapidTableInput
-from .utils import VisTable
+from .utils.utils import VisTable
