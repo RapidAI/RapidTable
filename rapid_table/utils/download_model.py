@@ -9,7 +9,7 @@ from .logger import get_logger
 
 logger = get_logger("DownloadModel")
 
-PROJECT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_DIR = PROJECT_DIR / "models"
 
 

@@ -31,7 +31,7 @@ class ModelType(Enum):
     UNITABLE = "unitable"
 
 
-ROOT_URL = "https://www.modelscope.cn/models/RapidAI-NG/RapidTable/resolve/master/"
+ROOT_URL = "https://www.modelscope.cn/models/RapidAI/RapidTable/resolve/master/"
 KEY_TO_MODEL_URL = {
     ModelType.PPSTRUCTURE_EN.value: f"{ROOT_URL}/en_ppstructure_mobile_v2_SLANet.onnx",
     ModelType.PPSTRUCTURE_ZH.value: f"{ROOT_URL}/ch_ppstructure_mobile_v2_SLANet.onnx",

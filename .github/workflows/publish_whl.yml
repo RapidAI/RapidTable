@@ -6,7 +6,7 @@ on:
       - v*
 
 env:
-  RESOURCES_URL: https://github.com/RapidAI/RapidTable/releases/download/assets/rapid_table_models.zip
+  DEFAULT_MODEL: https://www.modelscope.cn/models/RapidAI/RapidTable/resolve/master/slanet-plus.onnx
 
 jobs:
   UnitTesting:
@@ -26,11 +26,7 @@ jobs:
 
       - name: Unit testings
         run: |
-          wget $RESOURCES_URL
-          ZIP_NAME=${RESOURCES_URL##*/}
-          DIR_NAME=${ZIP_NAME%.*}
-          unzip $DIR_NAME
-          cp $DIR_NAME/*.onnx rapid_table/models/
+          wget $DEFAULT_MODEL -P rapid_table/models
 
           pip install -r requirements.txt
           pip install rapidocr_onnxruntime
@@ -58,11 +54,8 @@ jobs:
           pip install -r requirements.txt
           python -m pip install --upgrade pip
           pip install wheel get_pypi_latest_version
-          wget $RESOURCES_URL
-          ZIP_NAME=${RESOURCES_URL##*/}
-          DIR_NAME=${ZIP_NAME%.*}
-          unzip $ZIP_NAME
-          mv $DIR_NAME/slanet-plus.onnx rapid_table/models/
+
+          wget $DEFAULT_MODEL -P rapid_table/models
           python setup.py bdist_wheel ${{ github.ref_name }}
 
       - name: Publish distribution 📦 to PyPI
