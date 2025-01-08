@@ -4,7 +4,7 @@
 import os
 from io import BytesIO
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -84,8 +84,6 @@ class VisTable:
         self,
         img_path: Union[str, Path],
         table_results,
-        table_cell_bboxes: Optional[np.ndarray] = None,
-        logic_points: List[List[float]] = None,
         save_html_path: Optional[str] = None,
         save_drawed_path: Optional[str] = None,
         save_logic_path: Optional[str] = None,
@@ -94,7 +92,8 @@ class VisTable:
             html_with_border = self.insert_border_style(table_results.pred_html)
             self.save_html(save_html_path, html_with_border)
 
-        if table_results.cell_bboxes is None:
+        table_cell_bboxes = table_results.cell_bboxes
+        if table_cell_bboxes is None:
             return None
 
         img = self.load_img(img_path)

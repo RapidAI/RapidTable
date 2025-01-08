@@ -124,7 +124,6 @@ ocr_result, _ = ocr_engine(img_path)
 # ocr_result = trans_char_ocr_res(ocr_result)
 
 table_results = table_engine(img_path, ocr_result)
-table_html_str, table_cell_bboxes = table_results.pred_html, table_results.cell_bboxes
 
 save_dir = Path("./inference_results/")
 save_dir.mkdir(parents=True, exist_ok=True)

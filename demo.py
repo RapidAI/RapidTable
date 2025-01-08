@@ -34,9 +34,7 @@ save_html_path = save_dir / f"{Path(img_path).stem}.html"
 save_drawed_path = save_dir / f"{Path(img_path).stem}_table_vis{Path(img_path).suffix}"
 
 # Visualize table rec result
-vis_imged = viser(
-    img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_path
-)
+vis_imged = viser(img_path, table_results, save_html_path, save_drawed_path)
 
 # Visualize OCR result
 save_ocr_path = save_dir / f"{Path(img_path).stem}_ocr_vis{Path(img_path).suffix}"
