@@ -186,7 +186,10 @@ class TableStructureUnitable:
                 td_content = td_match.group(2).strip()
                 if td_attrs:
                     decoded_list.append("<td")
-                    decoded_list.append(" " + td_attrs)
+                    # 可能同时存在行列合并，需要都添加
+                    attrs_list = td_attrs.split()
+                    for attr in attrs_list:
+                        decoded_list.append(" " + attr)
                     decoded_list.append(">")
                     decoded_list.append("</td>")
                 else:
