@@ -40,11 +40,4 @@ def test_input_ocr_none(model_type):
     table_engine = RapidTable(input_args)
     table_results = table_engine(img_path)
     assert table_results.pred_html.count("<tr>") == 16
-
-
-@pytest.mark.parametrize("model_type", ["slanet_plus", "unitable"])
-def test_logic_points_out(model_type):
-    input_args = RapidTableInput(model_type=model_type)
-    table_engine = RapidTable(input_args)
-    table_results = table_engine(img_path, return_logic_points=True)
-    assert len(table_results.pred_bboxes) == len(table_results.logic_points)
+    assert len(table_results.cell_bboxes) == len(table_results.logic_points)

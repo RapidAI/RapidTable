@@ -55,7 +55,7 @@ class RapidTableInput:
 @dataclass
 class RapidTableOutput:
     pred_html: Optional[str] = None
-    pred_bboxes: Optional[np.ndarray] = None
+    cell_bboxes: Optional[np.ndarray] = None
     logic_points: Optional[np.ndarray] = None
     elapse: Optional[float] = None
 
@@ -88,7 +88,6 @@ class RapidTable:
         self,
         img_content: Union[str, np.ndarray, bytes, Path],
         ocr_result: List[Union[List[List[float]], str, str]] = None,
-        return_logic_points: bool = False,
     ) -> RapidTableOutput:
         if self.ocr_engine is None and ocr_result is None:
             raise ValueError(
@@ -104,28 +103,21 @@ class RapidTable:
             ocr_result, _ = self.ocr_engine(img)
         dt_boxes, rec_res = self.get_boxes_recs(ocr_result, h, w)
 
-        pred_structures, pred_bboxes, _ = self.table_structure(copy.deepcopy(img))
+        pred_structures, cell_bboxes, _ = self.table_structure(copy.deepcopy(img))
 
         # 适配slanet-plus模型输出的box缩放还原
         if self.model_type == ModelType.SLANETPLUS.value:
-            pred_bboxes = self.adapt_slanet_plus(img, pred_bboxes)
+            cell_bboxes = self.adapt_slanet_plus(img, cell_bboxes)
 
-        pred_html = self.table_matcher(pred_structures, pred_bboxes, dt_boxes, rec_res)
+        pred_html = self.table_matcher(pred_structures, cell_bboxes, dt_boxes, rec_res)
 
         # 过滤掉占位的bbox
-        mask = ~np.all(pred_bboxes == 0, axis=1)
-        pred_bboxes = pred_bboxes[mask]
+        mask = ~np.all(cell_bboxes == 0, axis=1)
+        cell_bboxes = cell_bboxes[mask]
 
-        # 避免低版本升级后出现问题,默认不打开
-        if return_logic_points:
-            logic_points = self.table_matcher.decode_logic_points(pred_structures)
-            elapse = time.perf_counter() - s
-            return RapidTableOutput(pred_html, pred_bboxes, logic_points, elapse)
-
+        logic_points = self.table_matcher.decode_logic_points(pred_structures)
         elapse = time.perf_counter() - s
-        return RapidTableOutput(
-            pred_html=pred_html, pred_bboxes=pred_bboxes, elapse=elapse
-        )
+        return RapidTableOutput(pred_html, cell_bboxes, logic_points, elapse)
 
     def get_boxes_recs(
         self, ocr_result: List[Union[List[List[float]], str, str]], h: int, w: int
@@ -145,15 +137,15 @@ class RapidTable:
         dt_boxes = np.array(r_boxes)
         return dt_boxes, rec_res
 
-    def adapt_slanet_plus(self, img: np.ndarray, pred_bboxes: np.ndarray) -> np.ndarray:
+    def adapt_slanet_plus(self, img: np.ndarray, cell_bboxes: np.ndarray) -> np.ndarray:
         h, w = img.shape[:2]
         resized = 488
         ratio = min(resized / h, resized / w)
         w_ratio = resized / (w * ratio)
         h_ratio = resized / (h * ratio)
-        pred_bboxes[:, 0::2] *= w_ratio
-        pred_bboxes[:, 1::2] *= h_ratio
-        return pred_bboxes
+        cell_bboxes[:, 0::2] *= w_ratio
+        cell_bboxes[:, 1::2] *= h_ratio
+        return cell_bboxes
 
     @staticmethod
     def get_model_path(
@@ -214,7 +206,7 @@ def main():
     table_results = table_engine(img, ocr_result)
     table_html_str, table_cell_bboxes = (
         table_results.pred_html,
-        table_results.pred_bboxes,
+        table_results.cell_bboxes,
     )
     print(table_html_str)
 

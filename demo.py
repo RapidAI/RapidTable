@@ -24,7 +24,7 @@ boxes, txts, scores = list(zip(*ocr_result))
 
 # Table Rec
 table_results = table_engine(img_path, ocr_result)
-table_html_str, table_cell_bboxes = table_results.pred_html, table_results.pred_bboxes
+table_html_str, table_cell_bboxes = table_results.pred_html, table_results.cell_bboxes
 
 # Save
 save_dir = Path("outputs")

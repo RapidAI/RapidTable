@@ -83,18 +83,18 @@ class VisTable:
     def __call__(
         self,
         img_path: Union[str, Path],
-        table_html_str: str,
-        save_html_path: Optional[str] = None,
+        table_results,
         table_cell_bboxes: Optional[np.ndarray] = None,
-        save_drawed_path: Optional[str] = None,
         logic_points: List[List[float]] = None,
+        save_html_path: Optional[str] = None,
+        save_drawed_path: Optional[str] = None,
         save_logic_path: Optional[str] = None,
-    ) -> None:
+    ):
         if save_html_path:
-            html_with_border = self.insert_border_style(table_html_str)
+            html_with_border = self.insert_border_style(table_results.pred_html)
             self.save_html(save_html_path, html_with_border)
 
-        if table_cell_bboxes is None:
+        if table_results.cell_bboxes is None:
             return None
 
         img = self.load_img(img_path)
@@ -109,6 +109,7 @@ class VisTable:
 
         if save_drawed_path:
             self.save_img(save_drawed_path, drawed_img)
+
         if save_logic_path and logic_points:
             polygons = [[box[0], box[1], box[4], box[5]] for box in table_cell_bboxes]
             self.plot_rec_box_with_logic_info(

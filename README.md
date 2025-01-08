@@ -80,7 +80,7 @@ class RapidTableInput:
 @dataclass
 class RapidTableOutput:
     pred_html: Optional[str] = None
-    pred_bboxes: Optional[np.ndarray] = None
+    cell_bboxes: Optional[np.ndarray] = None
     logic_points: Optional[np.ndarray] = None
     elapse: Optional[float] = None
 
@@ -106,22 +106,25 @@ from rapid_table.table_structure.utils import trans_char_ocr_res
 table_engine = RapidTable()
 
 # 开启onnx-gpu推理
-# table_engine = RapidTable(use_cuda=True)
+# input_args = RapidTableInput(use_cuda=True)
+# table_engine = RapidTable(input_args)
 
 # 使用torch推理版本的unitable模型
-# table_engine = RapidTable(use_cuda=True, device="cuda:0", model_type="unitable")
+# input_args = RapidTableInput(model_type="unitable", use_cuda=True, device="cuda:0")
+# table_engine = RapidTable(input_args)
 
 ocr_engine = RapidOCR()
 viser = VisTable()
 
 img_path = 'test_images/table.jpg'
 ocr_result, _ = ocr_engine(img_path)
+
 # 单字匹配
 # ocr_result, _ = ocr_engine(img_path, return_word_box=True)
 # ocr_result = trans_char_ocr_res(ocr_result)
 
 table_results = table_engine(img_path, ocr_result)
-table_html_str, table_cell_bboxes = table_results.pred_html, table_results.pred_bboxes
+table_html_str, table_cell_bboxes = table_results.pred_html, table_results.cell_bboxes
 
 save_dir = Path("./inference_results/")
 save_dir.mkdir(parents=True, exist_ok=True)
@@ -129,22 +132,15 @@ save_dir.mkdir(parents=True, exist_ok=True)
 save_html_path = save_dir / f"{Path(img_path).stem}.html"
 save_drawed_path = save_dir / f"vis_{Path(img_path).name}"
 
-viser(img_path, table_html_str, save_html_path, table_cell_bboxes, save_drawed_path)
-
-# 返回逻辑坐标
-# table_results = table_engine(img_path, ocr_result, return_logic_points=True)
-# table_html_str, table_cell_bboxes = table_results.pred_html, table_results.pred_bboxes
-# save_logic_path = save_dir / f"vis_logic_{Path(img_path).name}"
-# viser(
-#     img_path,
-#     table_results.pred_html,
-#     save_html_path,
-#     table_results.pred_bboxes,
-#     save_drawed_path,
-#     table_results.logic_points,
-#     save_logic_path,
-# )
-
+viser(
+    img_path,
+    table_results.pred_html,
+    save_html_path,
+    table_results.cell_bboxes,
+    save_drawed_path,
+    table_results.logic_points,
+    save_logic_path,
+)
 print(table_html_str)
 ```
 
