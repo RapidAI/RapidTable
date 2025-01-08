@@ -1,15 +1,14 @@
 import re
 import time
-from typing import Dict, Any
 
 import cv2
 import numpy as np
 import torch
 from PIL import Image
 from tokenizers import Tokenizer
+from torchvision import transforms
 
 from .unitable_modules import Encoder, GPTFastDecoder
-from torchvision import transforms
 
 IMG_SIZE = 448
 EOS_TOKEN = "<eos>"
@@ -79,32 +78,37 @@ TASK_TOKENS = [
 
 
 class TableStructureUnitable:
-    def __init__(self, config:Dict[str, Any]):
+    def __init__(self, config):
         # encoder_path: str, decoder_path: str, vocab_path: str, device: str
-        vocab_path = config["vocab_path"]
-        encoder_path = config["encoder_path"]
-        decoder_path = config["decoder_path"]
+        vocab_path = config["model_path"]["vocab"]
+        encoder_path = config["model_path"]["encoder"]
+        decoder_path = config["model_path"]["decoder"]
         device = config.get("device", "cuda:0") if config["use_cuda"] else "cpu"
 
         self.vocab = Tokenizer.from_file(vocab_path)
-        self.token_white_list = [self.vocab.token_to_id(i) for i in VALID_HTML_BBOX_TOKENS]
-        self.bbox_token_ids = set([self.vocab.token_to_id(i) for i in BBOX_TOKENS])
+        self.token_white_list = [
+            self.vocab.token_to_id(i) for i in VALID_HTML_BBOX_TOKENS
+        ]
+        self.bbox_token_ids = set(self.vocab.token_to_id(i) for i in BBOX_TOKENS)
         self.bbox_close_html_token = self.vocab.token_to_id("]</td>")
         self.prefix_token_id = self.vocab.token_to_id("[html+bbox]")
         self.eos_id = self.vocab.token_to_id(EOS_TOKEN)
         self.max_seq_len = 1024
         self.device = device
         self.img_size = IMG_SIZE
+
         # init encoder
         encoder_state_dict = torch.load(encoder_path, map_location=device)
         self.encoder = Encoder()
         self.encoder.load_state_dict(encoder_state_dict)
         self.encoder.eval().to(device)
+
         # init decoder
         decoder_state_dict = torch.load(decoder_path, map_location=device)
         self.decoder = GPTFastDecoder()
         self.decoder.load_state_dict(decoder_state_dict)
         self.decoder.eval().to(device)
+
         # define img transform
         self.transform = transforms.Compose(
             [
@@ -117,12 +121,8 @@ class TableStructureUnitable:
             ]
         )
 
-
     @torch.inference_mode()
-    def __call__(
-            self,
-            image: np.ndarray,
-    ):
+    def __call__(self, image: np.ndarray):
         start_time = time.time()
         ori_h, ori_w = image.shape[:2]
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -132,14 +132,19 @@ class TableStructureUnitable:
             max_batch_size=1,
             max_seq_length=self.max_seq_len,
             dtype=image.dtype,
-            device=self.device
+            device=self.device,
         )
-        context = torch.tensor([self.prefix_token_id], dtype=torch.int32).repeat(1, 1).to(self.device)
+        context = (
+            torch.tensor([self.prefix_token_id], dtype=torch.int32)
+            .repeat(1, 1)
+            .to(self.device)
+        )
         eos_id_tensor = torch.tensor(self.eos_id, dtype=torch.int32).to(self.device)
         memory = self.encoder(image)
         context = self.loop_decode(context, eos_id_tensor, memory)
         bboxes, html_tokens = self.decode_tokens(context)
         bboxes = bboxes.astype(np.float32)
+
         # rescale boxes
         scale_h = ori_h / self.img_size
         scale_w = ori_w / self.img_size
@@ -148,9 +153,9 @@ class TableStructureUnitable:
         bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, ori_w - 1)
         bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, ori_h - 1)
         structure_str_list = (
-                ["<html>", "<body>", "<table>"]
-                + html_tokens
-                + ["</table>", "</body>", "</html>"]
+            ["<html>", "<body>", "<table>"]
+            + html_tokens
+            + ["</table>", "</body>", "</html>"]
         )
         return structure_str_list, bboxes, time.time() - start_time
 
@@ -158,37 +163,34 @@ class TableStructureUnitable:
         pred_html = context[0]
         pred_html = pred_html.detach().cpu().numpy()
         pred_html = self.vocab.decode(pred_html, skip_special_tokens=False)
-        # pred_html = html_str_to_token_list(pred_html)
         seq = pred_html.split("<eos>")[0]
         token_black_list = ["<eos>", "<pad>", *TASK_TOKENS]
         for i in token_black_list:
             seq = seq.replace(i, "")
 
-        # 正则表达式模式
-        tr_pattern = re.compile(r'<tr>(.*?)</tr>', re.DOTALL)
-        td_pattern = re.compile(r'<td(.*?)>(.*?)</td>', re.DOTALL)
-        bbox_pattern = re.compile(r'\[ bbox-(\d+) bbox-(\d+) bbox-(\d+) bbox-(\d+) \]')
+        tr_pattern = re.compile(r"<tr>(.*?)</tr>", re.DOTALL)
+        td_pattern = re.compile(r"<td(.*?)>(.*?)</td>", re.DOTALL)
+        bbox_pattern = re.compile(r"\[ bbox-(\d+) bbox-(\d+) bbox-(\d+) bbox-(\d+) \]")
 
-        # 存储解码后的结果
         decoded_list = []
         bbox_coords = []
 
         # 查找所有的 <tr> 标签
         for tr_match in tr_pattern.finditer(pred_html):
             tr_content = tr_match.group(1)
-            decoded_list.append('<tr>')
+            decoded_list.append("<tr>")
 
             # 查找所有的 <td> 标签
             for td_match in td_pattern.finditer(tr_content):
                 td_attrs = td_match.group(1).strip()
                 td_content = td_match.group(2).strip()
                 if td_attrs:
-                    decoded_list.append('<td')
+                    decoded_list.append("<td")
                     decoded_list.append(" " + td_attrs)
-                    decoded_list.append('>')
-                    decoded_list.append('</td>')
+                    decoded_list.append(">")
+                    decoded_list.append("</td>")
                 else:
-                    decoded_list.append('<td></td>')
+                    decoded_list.append("<td></td>")
 
                 # 查找 bbox 坐标
                 bbox_match = bbox_pattern.search(td_content)
@@ -199,10 +201,9 @@ class TableStructureUnitable:
                     bbox_coords.append(coords)
                 else:
                     # 填充占位的bbox，保证后续流程统一
-                    bbox_coords.append(np.array([0, 0, 0,0,0,0, 0, 0]))
-            decoded_list.append('</tr>')
+                    bbox_coords.append(np.array([0, 0, 0, 0, 0, 0, 0, 0]))
+            decoded_list.append("</tr>")
 
-        # 将 bbox_coords 转换为 numpy 数组
         bbox_coords_array = np.array(bbox_coords)
         return bbox_coords_array, decoded_list
 
@@ -212,11 +213,14 @@ class TableStructureUnitable:
             eos_flag = (context == eos_id_tensor).any(dim=1)
             if torch.all(eos_flag):
                 break
+
             next_tokens = self.decoder(memory, context)
             if next_tokens[0] in self.bbox_token_ids:
                 box_token_count += 1
                 if box_token_count > 4:
-                    next_tokens = torch.tensor([self.bbox_close_html_token], dtype=torch.int32)
+                    next_tokens = torch.tensor(
+                        [self.bbox_close_html_token], dtype=torch.int32
+                    )
                     box_token_count = 0
             context = torch.cat([context, next_tokens], dim=1)
         return context

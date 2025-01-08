@@ -22,18 +22,18 @@ class TableMatch:
         self.filter_ocr_result = filter_ocr_result
         self.use_master = use_master
 
-    def __call__(self, pred_structures, pred_bboxes, dt_boxes, rec_res):
+    def __call__(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
         if self.filter_ocr_result:
-            dt_boxes, rec_res = self._filter_ocr_result(pred_bboxes, dt_boxes, rec_res)
-        matched_index = self.match_result(dt_boxes, pred_bboxes)
+            dt_boxes, rec_res = self._filter_ocr_result(cell_bboxes, dt_boxes, rec_res)
+        matched_index = self.match_result(dt_boxes, cell_bboxes)
         pred_html, pred = self.get_pred_html(pred_structures, matched_index, rec_res)
         return pred_html
 
-    def match_result(self, dt_boxes, pred_bboxes, min_iou=0.1**8):
+    def match_result(self, dt_boxes, cell_bboxes, min_iou=0.1**8):
         matched = {}
         for i, gt_box in enumerate(dt_boxes):
             distances = []
-            for j, pred_box in enumerate(pred_bboxes):
+            for j, pred_box in enumerate(cell_bboxes):
                 if len(pred_box) == 8:
                     pred_box = [
                         np.min(pred_box[0::2]),
@@ -186,8 +186,8 @@ class TableMatch:
 
         return logic_points
 
-    def _filter_ocr_result(self, pred_bboxes, dt_boxes, rec_res):
-        y1 = pred_bboxes[:, 1::2].min()
+    def _filter_ocr_result(self, cell_bboxes, dt_boxes, rec_res):
+        y1 = cell_bboxes[:, 1::2].min()
         new_dt_boxes = []
         new_rec_res = []
 

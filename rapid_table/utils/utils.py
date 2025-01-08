@@ -4,7 +4,7 @@
 import os
 from io import BytesIO
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -83,17 +83,16 @@ class VisTable:
     def __call__(
         self,
         img_path: Union[str, Path],
-        table_html_str: str,
+        table_results,
         save_html_path: Optional[str] = None,
-        table_cell_bboxes: Optional[np.ndarray] = None,
         save_drawed_path: Optional[str] = None,
-        logic_points: List[List[float]] = None,
         save_logic_path: Optional[str] = None,
-    ) -> None:
+    ):
         if save_html_path:
-            html_with_border = self.insert_border_style(table_html_str)
+            html_with_border = self.insert_border_style(table_results.pred_html)
             self.save_html(save_html_path, html_with_border)
 
+        table_cell_bboxes = table_results.cell_bboxes
         if table_cell_bboxes is None:
             return None
 
@@ -109,6 +108,7 @@ class VisTable:
 
         if save_drawed_path:
             self.save_img(save_drawed_path, drawed_img)
+
         if save_logic_path and logic_points:
             polygons = [[box[0], box[1], box[4], box[5]] for box in table_cell_bboxes]
             self.plot_rec_box_with_logic_info(
@@ -117,20 +117,21 @@ class VisTable:
         return drawed_img
 
     def insert_border_style(self, table_html_str: str):
-        style_res = f"""<meta charset="UTF-8"><style>
-        table {{
+        style_res = """<meta charset="UTF-8"><style>
+        table {
             border-collapse: collapse;
             width: 100%;
-        }}
-        th, td {{
+        }
+        th, td {
             border: 1px solid black;
             padding: 8px;
             text-align: center;
-        }}
-        th {{
+        }
+        th {
             background-color: #f2f2f2;
-        }}
+        }
                     </style>"""
+
         prefix_table, suffix_table = table_html_str.split("<body>")
         html_with_border = f"{prefix_table}{style_res}<body>{suffix_table}"
         return html_with_border
