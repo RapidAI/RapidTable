@@ -3,7 +3,8 @@
     <h1><b>📊 Rapid Table</b></h1>
   </div>
 
-<a href="https://swhl-rapidstructuredemo.hf.space" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Online Demo-blue"></a>
+<a href="https://huggingface.co/spaces/Joker1212/TableDetAndRec" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Online Demo-blue"></a>
+<a href="https://www.modelscope.cn/studios/RapidAI/TableRec/summary" target="_blank"><img src="https://img.shields.io/badge/魔搭-Demo-blue"></a>
 <a href=""><img src="https://img.shields.io/badge/Python->=3.6,<3.13-aff.svg"></a>
 <a href=""><img src="https://img.shields.io/badge/OS-Linux%2C%20Win%2C%20Mac-pink.svg"></a>
 <a href="https://pypi.org/project/rapid-table/"><img alt="PyPI" src="https://img.shields.io/pypi/v/rapid-table"></a>
