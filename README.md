@@ -22,6 +22,12 @@ slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升
 
 unitable是来源unitable的transformer模型，精度最高，暂仅支持pytorch推理，支持gpu推理加速,训练权重来源于 [OhMyTable项目](https://github.com/Sanster/OhMyTable)
 
+### 最近动态
+
+2024.12.30 update：支持Unitable模型的表格识别，使用pytorch框架 \
+2024.11.24 update：支持gpu推理，适配 rapidOCR 单字识别匹配,支持逻辑坐标返回及可视化 \
+2024.10.13 update：补充最新paddlex-SLANet-plus 模型(paddle2onnx原因暂不能支持onnx)
+
 ### 效果展示
 
 <div align="center">
@@ -46,7 +52,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 ### 安装
 
-由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。
+由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。
 
 > ⚠️注意：`rapid_table>=v0.1.0`之后，不再将`rapidocr_onnxruntime`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr_onnxruntime`包。
 
@@ -104,6 +110,7 @@ from rapid_table import RapidTable, VisTable
 from rapidocr_onnxruntime import RapidOCR
 from rapid_table.table_structure.utils import trans_char_ocr_res
 
+# 默认是slanet_plus模型
 table_engine = RapidTable()
 
 # 开启onnx-gpu推理
