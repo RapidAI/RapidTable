@@ -25,8 +25,11 @@ def get_readme():
 
 MODULE_NAME = "rapid_table"
 obtainer = GetPyPiLatestVersion()
-latest_version = obtainer(MODULE_NAME)
-VERSION_NUM = obtainer.version_add_one(latest_version, add_patch=True)
+try:
+    latest_version = obtainer(MODULE_NAME)
+except Exception:
+    latest_version = "0.0.0"
+VERSION_NUM = obtainer.version_add_one(latest_version)
 
 if len(sys.argv) > 2:
     match_str = " ".join(sys.argv[2:])
@@ -53,6 +56,7 @@ setuptools.setup(
         f"{MODULE_NAME}.models",
         f"{MODULE_NAME}.table_matcher",
         f"{MODULE_NAME}.table_structure",
+        f"{MODULE_NAME}.utils",
     ],
     package_data={"": ["slanet-plus.onnx"]},
     keywords=["ppstructure,table,rapidocr,rapid_table"],
