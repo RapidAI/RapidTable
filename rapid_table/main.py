@@ -198,7 +198,8 @@ def main():
             "Please install the rapidocr_onnxruntime by pip install rapidocr_onnxruntime."
         ) from exc
 
-    table_engine = RapidTable(args.model_path)
+    input_args = RapidTableInput(model_type=args.model_type)
+    table_engine = RapidTable(input_args)
 
     img = cv2.imread(args.img_path)
 
@@ -217,13 +218,7 @@ def main():
         save_dir = img_path.resolve().parent
         save_html_path = save_dir / f"{Path(img_path).stem}.html"
         save_drawed_path = save_dir / f"vis_{Path(img_path).name}"
-        viser(
-            img_path,
-            table_html_str,
-            save_html_path,
-            table_cell_bboxes,
-            save_drawed_path,
-        )
+        viser(img_path, table_results, save_html_path, save_drawed_path)
 
 
 if __name__ == "__main__":
