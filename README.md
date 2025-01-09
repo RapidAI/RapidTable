@@ -24,6 +24,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 ### 最近动态
 
+2025-01-09 update: 发布v1.0.2，全新接口升级。 \
 2024.12.30 update：支持Unitable模型的表格识别，使用pytorch框架 \
 2024.11.24 update：支持gpu推理，适配 rapidOCR 单字识别匹配,支持逻辑坐标返回及可视化 \
 2024.10.13 update：补充最新paddlex-SLANet-plus 模型(paddle2onnx原因暂不能支持onnx)
