@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
+import shlex
 import sys
 from pathlib import Path
 
@@ -13,6 +14,7 @@ root_dir = cur_dir.parent
 sys.path.append(str(root_dir))
 
 from rapid_table import RapidTable, RapidTableInput
+from rapid_table.main import main
 
 ocr_engine = RapidOCR()
 
@@ -21,6 +23,16 @@ table_engine = RapidTable(input_args)
 
 test_file_dir = cur_dir / "test_files"
 img_path = str(test_file_dir / "table.jpg")
+
+
+@pytest.mark.parametrize(
+    "command, expected_output",
+    [(f"--img_path {img_path} --model_type slanet_plus", 1274)],
+)
+def test_main(capsys, command, expected_output):
+    main(shlex.split(command))
+    output = capsys.readouterr().out.rstrip()
+    assert len(output) == expected_output
 
 
 @pytest.mark.parametrize("model_type", ["slanet_plus", "unitable"])

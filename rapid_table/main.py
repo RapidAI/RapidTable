@@ -170,7 +170,7 @@ class RapidTable:
         raise ValueError(f"Model URL: {type(model_url)} is not between str and dict.")
 
 
-def main():
+def parse_args(arg_list: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-v",
@@ -189,7 +189,12 @@ def main():
         default=ModelType.SLANETPLUS.value,
         choices=list(KEY_TO_MODEL_URL),
     )
-    args = parser.parse_args()
+    args = parser.parse_args(arg_list)
+    return args
+
+
+def main(arg_list: Optional[List[str]] = None):
+    args = parse_args(arg_list)
 
     try:
         ocr_engine = importlib.import_module("rapidocr_onnxruntime").RapidOCR()
@@ -205,11 +210,7 @@ def main():
 
     ocr_result, _ = ocr_engine(img)
     table_results = table_engine(img, ocr_result)
-    table_html_str, table_cell_bboxes = (
-        table_results.pred_html,
-        table_results.cell_bboxes,
-    )
-    print(table_html_str)
+    print(table_results.pred_html)
 
     viser = VisTable()
     if args.vis:
