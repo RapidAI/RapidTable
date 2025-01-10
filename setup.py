@@ -51,13 +51,7 @@ setuptools.setup(
     license="Apache-2.0",
     include_package_data=True,
     install_requires=read_txt("requirements.txt"),
-    packages=[
-        MODULE_NAME,
-        f"{MODULE_NAME}.models",
-        f"{MODULE_NAME}.table_matcher",
-        f"{MODULE_NAME}.table_structure",
-        f"{MODULE_NAME}.utils",
-    ],
+    packages=setuptools.find_packages(),
     package_data={"": ["slanet-plus.onnx"]},
     keywords=["ppstructure,table,rapidocr,rapid_table"],
     classifiers=[
