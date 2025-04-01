@@ -109,10 +109,10 @@ class VisTable:
         if save_drawed_path:
             self.save_img(save_drawed_path, drawed_img)
 
-        if save_logic_path and logic_points:
+        if save_logic_path and table_results.logic_points:
             polygons = [[box[0], box[1], box[4], box[5]] for box in table_cell_bboxes]
             self.plot_rec_box_with_logic_info(
-                img_path, save_logic_path, logic_points, polygons
+                img_path, save_logic_path, table_results.logic_points, polygons
             )
         return drawed_img
 
