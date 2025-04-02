@@ -170,7 +170,7 @@ class RapidTable:
         raise ValueError(f"Model URL: {type(model_url)} is not between str and dict.")
 
 
-def main():
+def parse_args(arg_list: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-v",
@@ -189,7 +189,12 @@ def main():
         default=ModelType.SLANETPLUS.value,
         choices=list(KEY_TO_MODEL_URL),
     )
-    args = parser.parse_args()
+    args = parser.parse_args(arg_list)
+    return args
+
+
+def main(arg_list: Optional[List[str]] = None):
+    args = parse_args(arg_list)
 
     try:
         ocr_engine = importlib.import_module("rapidocr_onnxruntime").RapidOCR()
@@ -198,17 +203,14 @@ def main():
             "Please install the rapidocr_onnxruntime by pip install rapidocr_onnxruntime."
         ) from exc
 
-    table_engine = RapidTable(args.model_path)
+    input_args = RapidTableInput(model_type=args.model_type)
+    table_engine = RapidTable(input_args)
 
     img = cv2.imread(args.img_path)
 
     ocr_result, _ = ocr_engine(img)
     table_results = table_engine(img, ocr_result)
-    table_html_str, table_cell_bboxes = (
-        table_results.pred_html,
-        table_results.cell_bboxes,
-    )
-    print(table_html_str)
+    print(table_results.pred_html)
 
     viser = VisTable()
     if args.vis:
@@ -217,13 +219,7 @@ def main():
         save_dir = img_path.resolve().parent
         save_html_path = save_dir / f"{Path(img_path).stem}.html"
         save_drawed_path = save_dir / f"vis_{Path(img_path).name}"
-        viser(
-            img_path,
-            table_html_str,
-            save_html_path,
-            table_cell_bboxes,
-            save_drawed_path,
-        )
+        viser(img_path, table_results, save_html_path, save_drawed_path)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,8 @@
     <h1><b>📊 Rapid Table</b></h1>
   </div>
 
-<a href="https://swhl-rapidstructuredemo.hf.space" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Online Demo-blue"></a>
+<a href="https://huggingface.co/spaces/Joker1212/TableDetAndRec" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Online Demo-blue"></a>
+<a href="https://www.modelscope.cn/studios/RapidAI/TableRec/summary" target="_blank"><img src="https://img.shields.io/badge/魔搭-Demo-blue"></a>
 <a href=""><img src="https://img.shields.io/badge/Python->=3.6,<3.13-aff.svg"></a>
 <a href=""><img src="https://img.shields.io/badge/OS-Linux%2C%20Win%2C%20Mac-pink.svg"></a>
 <a href="https://pypi.org/project/rapid-table/"><img alt="PyPI" src="https://img.shields.io/pypi/v/rapid-table"></a>
@@ -20,6 +21,13 @@ RapidTable库是专门用来文档类图像的表格结构还原，表格结构�
 slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升
 
 unitable是来源unitable的transformer模型，精度最高，暂仅支持pytorch推理，支持gpu推理加速,训练权重来源于 [OhMyTable项目](https://github.com/Sanster/OhMyTable)
+
+### 最近动态
+
+2025-01-09 update: 发布v1.x，全新接口升级。 \
+2024.12.30 update：支持Unitable模型的表格识别，使用pytorch框架 \
+2024.11.24 update：支持gpu推理，适配 rapidOCR 单字识别匹配,支持逻辑坐标返回及可视化 \
+2024.10.13 update：补充最新paddlex-SLANet-plus 模型(paddle2onnx原因暂不能支持onnx)
 
 ### 效果展示
 
@@ -41,11 +49,11 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 [PaddleX-SlaNetPlus 表格识别](https://github.com/PaddlePaddle/PaddleX/blob/release/3.0-beta1/docs/module_usage/tutorials/ocr_modules/table_structure_recognition.md)\
 [Unitable](https://github.com/poloclub/unitable?tab=readme-ov-file)
 
-模型托管在modelscope上，具体下载地址为：[link](https://www.modelscope.cn/models/RapidAI/RapidTable/files)
+模型下载地址：[link](https://www.modelscope.cn/models/RapidAI/RapidTable/files)
 
 ### 安装
 
-由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。
+由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径。注意仅限于我们现支持的`model_type`。
 
 > ⚠️注意：`rapid_table>=v0.1.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr_onnxruntime`包。
 
@@ -100,8 +108,18 @@ print(table_results.pred_html)
 from pathlib import Path
 
 from rapidocr import RapidOCR, VisRes
-
 from rapid_table import RapidTable, RapidTableInput, VisTable
+
+# 默认是slanet_plus模型
+table_engine = RapidTable()
+
+# 开启onnx-gpu推理
+# input_args = RapidTableInput(use_cuda=True)
+# table_engine = RapidTable(input_args)
+
+# 使用torch推理版本的unitable模型
+# input_args = RapidTableInput(model_type="unitable", use_cuda=True, device="cuda:0")
+# table_engine = RapidTable(input_args)
 
 ocr_engine = RapidOCR()
 vis_ocr = VisRes()
