@@ -13,14 +13,12 @@ from typing import Dict, List, Optional, Tuple, Union
 import cv2
 import numpy as np
 
-from rapid_table.utils.download_model import DownloadModel
-from rapid_table.utils.logger import get_logger
-from rapid_table.utils.utils import LoadImage, VisTable
+from rapid_table.utils import DownloadModel, LoadImage, Logger, VisTable
 
 from .table_matcher import TableMatch
 from .table_structure import TableStructurer, TableStructureUnitable
 
-logger = get_logger("main")
+logger = Logger(logger_name=__name__).get_log()
 root_dir = Path(__file__).resolve().parent
 
 
@@ -78,7 +76,7 @@ class RapidTable:
         self.table_matcher = TableMatch()
 
         try:
-            self.ocr_engine = importlib.import_module("rapidocr_onnxruntime").RapidOCR()
+            self.ocr_engine = importlib.import_module("rapidocr").RapidOCR()
         except ModuleNotFoundError:
             self.ocr_engine = None
 
@@ -100,7 +98,14 @@ class RapidTable:
         h, w = img.shape[:2]
 
         if ocr_result is None:
-            ocr_result, _ = self.ocr_engine(img)
+            ocr_result = self.ocr_engine(img)
+            ocr_result = list(
+                zip(
+                    ocr_result.boxes,
+                    ocr_result.txts,
+                    ocr_result.scores,
+                )
+            )
         dt_boxes, rec_res = self.get_boxes_recs(ocr_result, h, w)
 
         pred_structures, cell_bboxes, _ = self.table_structure(copy.deepcopy(img))

@@ -2,20 +2,23 @@
 # @Author: Jocker1212
 # @Contact: xinyijianggo@gmail.com
 import logging
-from functools import lru_cache
 
 
-@lru_cache(maxsize=32)
-def get_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+class Logger:
+    def __init__(self, log_level=logging.DEBUG, logger_name=None):
+        self.logger = logging.getLogger(logger_name)
+        self.logger.setLevel(log_level)
+        self.logger.propagate = False
 
-    fmt = "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
-    format_str = logging.Formatter(fmt)
+        fmt = "[%(levelname)s] %(asctime)s RapidTable %(filename)s:%(lineno)d: %(message)s"
+        formatter = logging.Formatter(fmt)
 
-    sh = logging.StreamHandler()
-    sh.setLevel(logging.DEBUG)
+        if not self.logger.handlers:
+            ch = logging.StreamHandler()
+            ch.setLevel(log_level)
 
-    logger.addHandler(sh)
-    sh.setFormatter(format_str)
-    return logger
+            ch.setFormatter(formatter)
+            self.logger.addHandler(ch)
+
+    def get_log(self):
+        return self.logger

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from rapidocr_onnxruntime import RapidOCR
+from rapidocr import RapidOCR
 
 cur_dir = Path(__file__).resolve().parent
 root_dir = cur_dir.parent
@@ -37,12 +37,12 @@ def test_main(capsys, command, expected_output):
 
 @pytest.mark.parametrize("model_type", ["slanet_plus", "unitable"])
 def test_ocr_input(model_type):
-    ocr_res, _ = ocr_engine(img_path)
-
+    ocr_res = ocr_engine(img_path)
+    ocr_result = list(zip(ocr_res.boxes, ocr_res.txts, ocr_res.scores))
     input_args = RapidTableInput(model_type=model_type)
     table_engine = RapidTable(input_args)
 
-    table_results = table_engine(img_path, ocr_res)
+    table_results = table_engine(img_path, ocr_result)
     assert table_results.pred_html.count("<tr>") == 16
 
 
