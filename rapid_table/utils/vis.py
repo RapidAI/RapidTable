@@ -47,7 +47,7 @@ class VisTable:
         if save_logic_path and table_results.logic_points:
             polygons = [[box[0], box[1], box[4], box[5]] for box in table_cell_bboxes]
             self.plot_rec_box_with_logic_info(
-                img_path, save_logic_path, table_results.logic_points, polygons
+                img, save_logic_path, table_results.logic_points, polygons
             )
         return drawed_img
 
@@ -72,7 +72,7 @@ class VisTable:
         return html_with_border
 
     def plot_rec_box_with_logic_info(
-        self, img_path, output_path, logic_points, sorted_polygons
+        self, img: np.ndarray, output_path, logic_points, sorted_polygons
     ):
         """
         :param img_path
@@ -82,7 +82,6 @@ class VisTable:
         :return:
         """
         # 读取原图
-        img = cv2.imread(img_path)
         img = cv2.copyMakeBorder(
             img, 0, 0, 0, 100, cv2.BORDER_CONSTANT, value=[255, 255, 255]
         )

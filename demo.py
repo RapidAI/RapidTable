@@ -16,7 +16,7 @@ if __name__ == "__main__":
     table_engine = RapidTable(input_args)
     viser = VisTable()
 
-    img_path = "tests/test_files/table.jpg"
+    img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
 
     # OCR
     rapid_ocr_output = ocr_engine(img_path)
@@ -24,6 +24,7 @@ if __name__ == "__main__":
         zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
     )
     table_results = table_engine(img_path, ocr_result)
+
     # 使用单字识别
     # word_results = rapid_ocr_output.word_results
     # ocr_result = [
