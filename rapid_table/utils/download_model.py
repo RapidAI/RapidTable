@@ -5,15 +5,15 @@ from typing import Optional, Union
 import requests
 from tqdm import tqdm
 
-from .logger import get_logger
-
-logger = get_logger("DownloadModel")
+from .logger import Logger
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_DIR = PROJECT_DIR / "models"
 
 
 class DownloadModel:
+    logger = Logger(logger_name=__name__).get_log()
+
     @classmethod
     def download(
         cls,
@@ -31,11 +31,11 @@ class DownloadModel:
 
         save_file_path = save_dir / save_model_name
         if save_file_path.exists():
-            logger.debug("%s already exists", save_file_path)
+            cls.logger.info("%s already exists", save_file_path)
             return str(save_file_path)
 
         try:
-            logger.info("Download %s to %s", model_full_url, save_dir)
+            cls.logger.info("Download %s to %s", model_full_url, save_dir)
             file = cls.download_as_bytes_with_progress(model_full_url, save_model_name)
             cls.save_file(save_file_path, file)
         except Exception as exc:

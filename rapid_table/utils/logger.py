@@ -2,20 +2,36 @@
 # @Author: Jocker1212
 # @Contact: xinyijianggo@gmail.com
 import logging
-from functools import lru_cache
+
+import colorlog
 
 
-@lru_cache(maxsize=32)
-def get_logger(name: str) -> logging.Logger:
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+class Logger:
+    def __init__(self, log_level=logging.DEBUG, logger_name=None):
+        self.logger = logging.getLogger(logger_name)
+        self.logger.setLevel(log_level)
+        self.logger.propagate = False
 
-    fmt = "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
-    format_str = logging.Formatter(fmt)
+        formatter = colorlog.ColoredFormatter(
+            "%(log_color)s[%(levelname)s] %(asctime)s [RapidTable] %(filename)s:%(lineno)d: %(message)s",
+            log_colors={
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "yellow",
+                "ERROR": "red",
+                "CRITICAL": "red,bg_white",
+            },
+        )
 
-    sh = logging.StreamHandler()
-    sh.setLevel(logging.DEBUG)
+        if not self.logger.handlers:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
 
-    logger.addHandler(sh)
-    sh.setFormatter(format_str)
-    return logger
+            for handler in self.logger.handlers:
+                self.logger.removeHandler(handler)
+
+            console_handler.setLevel(log_level)
+            self.logger.addHandler(console_handler)
+
+    def get_log(self):
+        return self.logger
