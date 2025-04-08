@@ -89,7 +89,7 @@ class RapidTable:
     ) -> RapidTableOutput:
         if self.ocr_engine is None and ocr_result is None:
             raise ValueError(
-                "One of two conditions must be met: ocr_result is not empty, or rapidocr_onnxruntime is installed."
+                "One of two conditions must be met: ocr_result is not empty, or rapidocr is installed."
             )
 
         img = self.load_img(img_content)
@@ -202,10 +202,10 @@ def main(arg_list: Optional[List[str]] = None):
     args = parse_args(arg_list)
 
     try:
-        ocr_engine = importlib.import_module("rapidocr_onnxruntime").RapidOCR()
+        ocr_engine = importlib.import_module("rapidocr").RapidOCR()
     except ModuleNotFoundError as exc:
         raise ModuleNotFoundError(
-            "Please install the rapidocr_onnxruntime by pip install rapidocr_onnxruntime."
+            "Please install the rapidocr by pip install rapidocr"
         ) from exc
 
     input_args = RapidTableInput(model_type=args.model_type)
@@ -213,7 +213,10 @@ def main(arg_list: Optional[List[str]] = None):
 
     img = cv2.imread(args.img_path)
 
-    ocr_result, _ = ocr_engine(img)
+    rapid_ocr_output = ocr_engine(img)
+    ocr_result = list(
+        zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
+    )
     table_results = table_engine(img, ocr_result)
     print(table_results.pred_html)
 
