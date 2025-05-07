@@ -110,9 +110,6 @@ from pathlib import Path
 from rapidocr import RapidOCR, VisRes
 from rapid_table import RapidTable, RapidTableInput, VisTable
 
-# 默认是slanet_plus模型
-table_engine = RapidTable()
-
 # 开启onnx-gpu推理
 # input_args = RapidTableInput(use_cuda=True)
 # table_engine = RapidTable(input_args)
@@ -124,6 +121,7 @@ table_engine = RapidTable()
 ocr_engine = RapidOCR()
 vis_ocr = VisRes()
 
+# 默认是slanet_plus模型
 input_args = RapidTableInput(model_type="unitable")
 table_engine = RapidTable(input_args)
 viser = VisTable()
