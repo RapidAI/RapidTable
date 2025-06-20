@@ -59,7 +59,12 @@ class RapidTableOutput:
 
 
 class RapidTable:
-    def __init__(self, config: RapidTableInput):
+    def __init__(self, config: Optional[RapidTableInput] = None):
+        if config is None:
+            config = RapidTableInput()
+        if not isinstance(config, RapidTableInput):
+            raise TypeError(f"config must be an instance of RapidTableInput, but got {type(config)}")
+            
         self.model_type = config.model_type
         if self.model_type not in KEY_TO_MODEL_URL:
             model_list = ",".join(KEY_TO_MODEL_URL)
