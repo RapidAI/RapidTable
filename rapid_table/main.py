@@ -16,7 +16,7 @@ import numpy as np
 from rapid_table.utils import DownloadModel, LoadImage, Logger, VisTable
 
 from .table_matcher import TableMatch
-from .table_structure import TableStructurer, TableStructureUnitable
+
 
 logger = Logger(logger_name=__name__).get_log()
 root_dir = Path(__file__).resolve().parent
@@ -74,8 +74,10 @@ class RapidTable:
 
         config.model_path = self.get_model_path(config.model_type, config.model_path)
         if self.model_type == ModelType.UNITABLE.value:
+            from .table_structure.table_structure_unitable import TableStructureUnitable
             self.table_structure = TableStructureUnitable(asdict(config))
         else:
+            from .table_structure.table_structure import TableStructurer
             self.table_structure = TableStructurer(asdict(config))
 
         self.table_matcher = TableMatch()
