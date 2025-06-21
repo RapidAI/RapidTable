@@ -76,7 +76,7 @@ def deal_duplicate_bb(thead_part):
         r'<td colspan="(\d)+" rowspan="(\d)+">(.+?)</td>|'
         r'<td rowspan="(\d)+">(.+?)</td>|'
         r'<td colspan="(\d)+">(.+?)</td>|'
-        r'<td>(.*?)</td>'
+        r"<td>(.*?)</td>"
     )
     td_iter = re.finditer(td_pattern, thead_part)
     td_list = [t.group() for t in td_iter]
