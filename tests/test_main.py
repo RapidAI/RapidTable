@@ -12,14 +12,11 @@ cur_dir = Path(__file__).resolve().parent
 root_dir = cur_dir.parent
 
 sys.path.append(str(root_dir))
-
-from rapid_table import RapidTable, RapidTableInput
+from rapid_table import EngineType, ModelType, RapidTable, RapidTableInput
 from rapid_table.main import main
 
 ocr_engine = RapidOCR()
-
-input_args = RapidTableInput()
-table_engine = RapidTable(input_args)
+table_engine = RapidTable()
 
 test_file_dir = cur_dir / "test_files"
 img_path = str(test_file_dir / "table.jpg")
@@ -35,20 +32,32 @@ def test_main(capsys, command, expected_output):
     assert len(output) == expected_output
 
 
-@pytest.mark.parametrize("model_type", ["slanet_plus", "unitable"])
-def test_ocr_input(model_type):
+@pytest.mark.parametrize(
+    "model_type,engine_type",
+    [
+        (ModelType.SLANETPLUS, EngineType.ONNXRUNTIME),
+        (ModelType.UNITABLE, EngineType.TORCH),
+    ],
+)
+def test_ocr_input(model_type, engine_type):
     ocr_res = ocr_engine(img_path)
     ocr_result = list(zip(ocr_res.boxes, ocr_res.txts, ocr_res.scores))
-    input_args = RapidTableInput(model_type=model_type)
-    table_engine = RapidTable(input_args)
 
+    input_args = RapidTableInput(model_type=model_type, engine_type=engine_type)
+    table_engine = RapidTable(input_args)
     table_results = table_engine(img_path, ocr_result)
     assert table_results.pred_html.count("<tr>") == 16
 
 
-@pytest.mark.parametrize("model_type", ["slanet_plus", "unitable"])
-def test_input_ocr_none(model_type):
-    input_args = RapidTableInput(model_type=model_type)
+@pytest.mark.parametrize(
+    "model_type,engine_type",
+    [
+        (ModelType.SLANETPLUS, EngineType.ONNXRUNTIME),
+        (ModelType.UNITABLE, EngineType.TORCH),
+    ],
+)
+def test_input_ocr_none(model_type, engine_type):
+    input_args = RapidTableInput(model_type=model_type, engine_type=engine_type)
     table_engine = RapidTable(input_args)
     table_results = table_engine(img_path)
     assert table_results.pred_html.count("<tr>") == 16

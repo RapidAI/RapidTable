@@ -1,14 +1,15 @@
 import re
 import time
+from typing import Any, Dict
 
 import cv2
 import numpy as np
 import torch
 from PIL import Image
-from tokenizers import Tokenizer
 from torchvision import transforms
 
-from .unitable_modules import Encoder, GPTFastDecoder
+from ...inference_engine.base import get_engine
+from ...utils import EngineType
 
 IMG_SIZE = 448
 EOS_TOKEN = "<eos>"
@@ -77,15 +78,17 @@ TASK_TOKENS = [
 ]
 
 
-class TableStructureUnitable:
-    def __init__(self, config):
-        # encoder_path: str, decoder_path: str, vocab_path: str, device: str
-        vocab_path = config["model_path"]["vocab"]
-        encoder_path = config["model_path"]["encoder"]
-        decoder_path = config["model_path"]["decoder"]
-        device = config.get("device", "cuda:0") if config["use_cuda"] else "cpu"
+class UniTableStructure:
+    def __init__(self, cfg: Dict[str, Any]):
+        if cfg["engine_type"] is None:
+            cfg["engine_type"] = EngineType.TORCH
+        self.model = get_engine(cfg["engine_type"])(cfg)
 
-        self.vocab = Tokenizer.from_file(vocab_path)
+        self.encoder = self.model.encoder
+        self.decoder = self.model.decoder
+        self.device = self.model.device
+
+        self.vocab = self.model.vocab
         self.token_white_list = [
             self.vocab.token_to_id(i) for i in VALID_HTML_BBOX_TOKENS
         ]
@@ -93,23 +96,10 @@ class TableStructureUnitable:
         self.bbox_close_html_token = self.vocab.token_to_id("]</td>")
         self.prefix_token_id = self.vocab.token_to_id("[html+bbox]")
         self.eos_id = self.vocab.token_to_id(EOS_TOKEN)
+
         self.max_seq_len = 1024
-        self.device = device
         self.img_size = IMG_SIZE
 
-        # init encoder
-        encoder_state_dict = torch.load(encoder_path, map_location=device)
-        self.encoder = Encoder()
-        self.encoder.load_state_dict(encoder_state_dict)
-        self.encoder.eval().to(device)
-
-        # init decoder
-        decoder_state_dict = torch.load(decoder_path, map_location=device)
-        self.decoder = GPTFastDecoder()
-        self.decoder.load_state_dict(decoder_state_dict)
-        self.decoder.eval().to(device)
-
-        # define img transform
         self.transform = transforms.Compose(
             [
                 transforms.Resize((448, 448)),

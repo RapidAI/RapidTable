@@ -3,8 +3,7 @@ from functools import partial
 from typing import Optional
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 from torch.nn import functional as F
 from torch.nn.modules.transformer import _get_activation_fn
 

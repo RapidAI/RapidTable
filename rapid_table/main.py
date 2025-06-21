@@ -2,97 +2,65 @@
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
 import argparse
-import copy
-import importlib
 import time
-from dataclasses import asdict, dataclass
-from enum import Enum
+from dataclasses import asdict
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 
-from rapid_table.utils import DownloadModel, LoadImage, Logger, VisTable
-
+from .model_processor.main import ModelProcessor
 from .table_matcher import TableMatch
-
+from .utils import (
+    LoadImage,
+    Logger,
+    ModelType,
+    RapidTableInput,
+    RapidTableOutput,
+    VisTable,
+    import_package,
+)
 
 logger = Logger(logger_name=__name__).get_log()
 root_dir = Path(__file__).resolve().parent
 
 
-class ModelType(Enum):
-    PPSTRUCTURE_EN = "ppstructure_en"
-    PPSTRUCTURE_ZH = "ppstructure_zh"
-    SLANETPLUS = "slanet_plus"
-    UNITABLE = "unitable"
-
-
-ROOT_URL = "https://www.modelscope.cn/models/RapidAI/RapidTable/resolve/master/"
-KEY_TO_MODEL_URL = {
-    ModelType.PPSTRUCTURE_EN.value: f"{ROOT_URL}/en_ppstructure_mobile_v2_SLANet.onnx",
-    ModelType.PPSTRUCTURE_ZH.value: f"{ROOT_URL}/ch_ppstructure_mobile_v2_SLANet.onnx",
-    ModelType.SLANETPLUS.value: f"{ROOT_URL}/slanet-plus.onnx",
-    ModelType.UNITABLE.value: {
-        "encoder": f"{ROOT_URL}/unitable/encoder.pth",
-        "decoder": f"{ROOT_URL}/unitable/decoder.pth",
-        "vocab": f"{ROOT_URL}/unitable/vocab.json",
-    },
-}
-
-
-@dataclass
-class RapidTableInput:
-    model_type: Optional[str] = ModelType.SLANETPLUS.value
-    model_path: Union[str, Path, None, Dict[str, str]] = None
-    use_cuda: bool = False
-    device: str = "cpu"
-
-
-@dataclass
-class RapidTableOutput:
-    pred_html: Optional[str] = None
-    cell_bboxes: Optional[np.ndarray] = None
-    logic_points: Optional[np.ndarray] = None
-    elapse: Optional[float] = None
-
-
 class RapidTable:
-    def __init__(self, config: Optional[RapidTableInput] = None):
-        if config is None:
-            config = RapidTableInput()
-        if not isinstance(config, RapidTableInput):
-            raise TypeError(f"config must be an instance of RapidTableInput, but got {type(config)}")
-            
-        self.model_type = config.model_type
-        if self.model_type not in KEY_TO_MODEL_URL:
-            model_list = ",".join(KEY_TO_MODEL_URL)
-            raise ValueError(
-                f"{self.model_type} is not supported. The currently supported models are {model_list}."
-            )
+    def __init__(self, cfg: Optional[RapidTableInput] = None):
+        if cfg is None:
+            cfg = RapidTableInput()
 
-        config.model_path = self.get_model_path(config.model_type, config.model_path)
-        if self.model_type == ModelType.UNITABLE.value:
-            from .table_structure.table_structure_unitable import TableStructureUnitable
-            self.table_structure = TableStructureUnitable(asdict(config))
-        else:
-            from .table_structure.table_structure import TableStructurer
-            self.table_structure = TableStructurer(asdict(config))
+        if not cfg.model_dir_or_path:
+            cfg.model_dir_or_path = ModelProcessor.get_model_path(cfg.model_type)
 
+        self.cfg = cfg
+        self.table_structure = self._init_table_structer()
+        self.ocr_engine = self._init_ocr_engine()
         self.table_matcher = TableMatch()
-
-        try:
-            self.ocr_engine = importlib.import_module("rapidocr").RapidOCR()
-        except ModuleNotFoundError:
-            self.ocr_engine = None
-
         self.load_img = LoadImage()
+
+    def _init_ocr_engine(self):
+        try:
+            return import_package("rapidocr").RapidOCR()
+        except ModuleNotFoundError:
+            logger.warning("rapidocr package is not installed, only table rec")
+            return None
+
+    def _init_table_structer(self):
+        if self.cfg.model_type == ModelType.UNITABLE:
+            from .table_structure.unitable import UniTableStructure
+
+            return UniTableStructure(asdict(self.cfg))
+
+        from .table_structure.pp_structure import PPTableStructurer
+
+        return PPTableStructurer(asdict(self.cfg))
 
     def __call__(
         self,
         img_content: Union[str, np.ndarray, bytes, Path],
-        ocr_result: List[Union[List[List[float]], str, str]] = None,
+        ocr_result: Optional[List[Union[List[List[float]], str, str]]] = None,
     ) -> RapidTableOutput:
         if self.ocr_engine is None and ocr_result is None:
             raise ValueError(
@@ -115,10 +83,10 @@ class RapidTable:
             )
         dt_boxes, rec_res = self.get_boxes_recs(ocr_result, h, w)
 
-        pred_structures, cell_bboxes, _ = self.table_structure(copy.deepcopy(img))
+        pred_structures, cell_bboxes, _ = self.table_structure(img)
 
         # 适配slanet-plus模型输出的box缩放还原
-        if self.model_type == ModelType.SLANETPLUS.value:
+        if self.cfg.model_type == ModelType.SLANETPLUS:
             cell_bboxes = self.adapt_slanet_plus(img, cell_bboxes)
 
         pred_html = self.table_matcher(pred_structures, cell_bboxes, dt_boxes, rec_res)
@@ -129,7 +97,7 @@ class RapidTable:
 
         logic_points = self.table_matcher.decode_logic_points(pred_structures)
         elapse = time.perf_counter() - s
-        return RapidTableOutput(pred_html, cell_bboxes, logic_points, elapse)
+        return RapidTableOutput(img, pred_html, cell_bboxes, logic_points, elapse)
 
     def get_boxes_recs(
         self, ocr_result: List[Union[List[List[float]], str, str]], h: int, w: int
@@ -159,28 +127,6 @@ class RapidTable:
         cell_bboxes[:, 1::2] *= h_ratio
         return cell_bboxes
 
-    @staticmethod
-    def get_model_path(
-        model_type: str, model_path: Union[str, Path, None]
-    ) -> Union[str, Dict[str, str]]:
-        if model_path is not None:
-            return model_path
-
-        model_url = KEY_TO_MODEL_URL.get(model_type, None)
-        if isinstance(model_url, str):
-            model_path = DownloadModel.download(model_url)
-            return model_path
-
-        if isinstance(model_url, dict):
-            model_paths = {}
-            for k, url in model_url.items():
-                model_paths[k] = DownloadModel.download(
-                    url, save_model_name=f"{model_type}_{Path(url).name}"
-                )
-            return model_paths
-
-        raise ValueError(f"Model URL: {type(model_url)} is not between str and dict.")
-
 
 def parse_args(arg_list: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
@@ -199,7 +145,7 @@ def parse_args(arg_list: Optional[List[str]] = None):
         "--model_type",
         type=str,
         default=ModelType.SLANETPLUS.value,
-        choices=list(KEY_TO_MODEL_URL),
+        choices=[v.value for v in ModelType],
     )
     args = parser.parse_args(arg_list)
     return args
@@ -208,19 +154,15 @@ def parse_args(arg_list: Optional[List[str]] = None):
 def main(arg_list: Optional[List[str]] = None):
     args = parse_args(arg_list)
 
-    try:
-        ocr_engine = importlib.import_module("rapidocr").RapidOCR()
-    except ModuleNotFoundError as exc:
-        raise ModuleNotFoundError(
-            "Please install the rapidocr by pip install rapidocr"
-        ) from exc
-
-    input_args = RapidTableInput(model_type=args.model_type)
+    input_args = RapidTableInput(model_type=ModelType(args.model_type))
     table_engine = RapidTable(input_args)
+
+    if table_engine.ocr_engine is None:
+        raise ValueError("ocr engine is None")
 
     img = cv2.imread(args.img_path)
 
-    rapid_ocr_output = ocr_engine(img)
+    rapid_ocr_output = table_engine.ocr_engine(img)
     ocr_result = list(
         zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
     )
