@@ -16,7 +16,7 @@ import numpy as np
 from rapid_table.utils import DownloadModel, LoadImage, Logger, VisTable
 
 from .table_matcher import TableMatch
-from .table_structure import TableStructurer, TableStructureUnitable
+
 
 logger = Logger(logger_name=__name__).get_log()
 root_dir = Path(__file__).resolve().parent
@@ -59,7 +59,12 @@ class RapidTableOutput:
 
 
 class RapidTable:
-    def __init__(self, config: RapidTableInput):
+    def __init__(self, config: Optional[RapidTableInput] = None):
+        if config is None:
+            config = RapidTableInput()
+        if not isinstance(config, RapidTableInput):
+            raise TypeError(f"config must be an instance of RapidTableInput, but got {type(config)}")
+            
         self.model_type = config.model_type
         if self.model_type not in KEY_TO_MODEL_URL:
             model_list = ",".join(KEY_TO_MODEL_URL)
@@ -69,8 +74,10 @@ class RapidTable:
 
         config.model_path = self.get_model_path(config.model_type, config.model_path)
         if self.model_type == ModelType.UNITABLE.value:
+            from .table_structure.table_structure_unitable import TableStructureUnitable
             self.table_structure = TableStructureUnitable(asdict(config))
         else:
+            from .table_structure.table_structure import TableStructurer
             self.table_structure = TableStructurer(asdict(config))
 
         self.table_matcher = TableMatch()
