@@ -3,10 +3,12 @@
 # @Contact: liekkaskono@163.com
 from rapidocr import RapidOCR
 
-from rapid_table import RapidTable
+from rapid_table import ModelType, RapidTable, RapidTableInput
 
 ocr_engine = RapidOCR()
-table_engine = RapidTable()
+
+input_args = RapidTableInput(model_type=ModelType.UNITABLE)
+table_engine = RapidTable(input_args)
 
 img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
 rapid_ocr_output = ocr_engine(img_path)

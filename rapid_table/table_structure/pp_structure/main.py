@@ -19,6 +19,7 @@ import numpy as np
 from rapid_table.utils.typings import EngineType
 
 from ...inference_engine.base import get_engine
+from ..utils import get_struct_str
 from .post_process import TableLabelDecode
 from .pre_process import TablePreprocess
 
@@ -42,17 +43,8 @@ class PPTableStructurer:
         bbox_preds, struct_probs = self.session(img.copy())
 
         post_result = self.postprocess_op(bbox_preds, struct_probs, [shape_list])
-        table_struct_str = self.get_struct_str(post_result)
+        table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
         bbox_list = post_result["bbox_batch_list"][0]
 
         elapse = time.perf_counter() - s
         return table_struct_str, bbox_list, elapse
-
-    def get_struct_str(self, post_result: Dict[str, Any]) -> List[str]:
-        structure_str_list = post_result["structure_batch_list"][0][0]
-        structure_str_list = (
-            ["<html>", "<body>", "<table>"]
-            + structure_str_list
-            + ["</table>", "</body>", "</html>"]
-        )
-        return structure_str_list

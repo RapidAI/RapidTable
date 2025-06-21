@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 import re
 import time
 from typing import Any, Dict
@@ -10,72 +11,14 @@ from torchvision import transforms
 
 from ...inference_engine.base import get_engine
 from ...utils import EngineType
-
-IMG_SIZE = 448
-EOS_TOKEN = "<eos>"
-BBOX_TOKENS = [f"bbox-{i}" for i in range(IMG_SIZE + 1)]
-
-HTML_BBOX_HTML_TOKENS = [
-    "<td></td>",
-    "<td>[",
-    "]</td>",
-    "<td",
-    ">[",
-    "></td>",
-    "<tr>",
-    "</tr>",
-    "<tbody>",
-    "</tbody>",
-    "<thead>",
-    "</thead>",
-    ' rowspan="2"',
-    ' rowspan="3"',
-    ' rowspan="4"',
-    ' rowspan="5"',
-    ' rowspan="6"',
-    ' rowspan="7"',
-    ' rowspan="8"',
-    ' rowspan="9"',
-    ' rowspan="10"',
-    ' rowspan="11"',
-    ' rowspan="12"',
-    ' rowspan="13"',
-    ' rowspan="14"',
-    ' rowspan="15"',
-    ' rowspan="16"',
-    ' rowspan="17"',
-    ' rowspan="18"',
-    ' rowspan="19"',
-    ' colspan="2"',
-    ' colspan="3"',
-    ' colspan="4"',
-    ' colspan="5"',
-    ' colspan="6"',
-    ' colspan="7"',
-    ' colspan="8"',
-    ' colspan="9"',
-    ' colspan="10"',
-    ' colspan="11"',
-    ' colspan="12"',
-    ' colspan="13"',
-    ' colspan="14"',
-    ' colspan="15"',
-    ' colspan="16"',
-    ' colspan="17"',
-    ' colspan="18"',
-    ' colspan="19"',
-    ' colspan="25"',
-]
-
-VALID_HTML_BBOX_TOKENS = [EOS_TOKEN] + HTML_BBOX_HTML_TOKENS + BBOX_TOKENS
-TASK_TOKENS = [
-    "[table]",
-    "[html]",
-    "[cell]",
-    "[bbox]",
-    "[cell+bbox]",
-    "[html+bbox]",
-]
+from ..utils import get_struct_str
+from .consts import (
+    BBOX_TOKENS,
+    EOS_TOKEN,
+    IMG_SIZE,
+    TASK_TOKENS,
+    VALID_HTML_BBOX_TOKENS,
+)
 
 
 class UniTableStructure:
@@ -89,17 +32,29 @@ class UniTableStructure:
         self.device = self.model.device
 
         self.vocab = self.model.vocab
+
         self.token_white_list = [
             self.vocab.token_to_id(i) for i in VALID_HTML_BBOX_TOKENS
         ]
+
         self.bbox_token_ids = set(self.vocab.token_to_id(i) for i in BBOX_TOKENS)
         self.bbox_close_html_token = self.vocab.token_to_id("]</td>")
+
         self.prefix_token_id = self.vocab.token_to_id("[html+bbox]")
+
         self.eos_id = self.vocab.token_to_id(EOS_TOKEN)
+
+        self.context = (
+            torch.tensor([self.prefix_token_id], dtype=torch.int32)
+            .repeat(1, 1)
+            .to(self.device)
+        )
+        self.eos_id_tensor = torch.tensor(self.eos_id, dtype=torch.int32).to(
+            self.device
+        )
 
         self.max_seq_len = 1024
         self.img_size = IMG_SIZE
-
         self.transform = transforms.Compose(
             [
                 transforms.Resize((448, 448)),
@@ -113,27 +68,20 @@ class UniTableStructure:
 
     @torch.inference_mode()
     def __call__(self, image: np.ndarray):
-        start_time = time.time()
+        start_time = time.perf_counter()
+
         ori_h, ori_w = image.shape[:2]
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(image)
-        image = self.transform(image).unsqueeze(0).to(self.device)
+        image = self.preprocess_img(image)
+
         self.decoder.setup_caches(
             max_batch_size=1,
             max_seq_length=self.max_seq_len,
             dtype=image.dtype,
             device=self.device,
         )
-        context = (
-            torch.tensor([self.prefix_token_id], dtype=torch.int32)
-            .repeat(1, 1)
-            .to(self.device)
-        )
-        eos_id_tensor = torch.tensor(self.eos_id, dtype=torch.int32).to(self.device)
         memory = self.encoder(image)
-        context = self.loop_decode(context, eos_id_tensor, memory)
+        context = self.loop_decode(self.context, self.eos_id_tensor, memory)
         bboxes, html_tokens = self.decode_tokens(context)
-        bboxes = bboxes.astype(np.float32)
 
         # rescale boxes
         scale_h = ori_h / self.img_size
@@ -142,12 +90,15 @@ class UniTableStructure:
         bboxes[:, 1::2] *= scale_h  # 缩放 y 坐标
         bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, ori_w - 1)
         bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, ori_h - 1)
-        structure_str_list = (
-            ["<html>", "<body>", "<table>"]
-            + html_tokens
-            + ["</table>", "</body>", "</html>"]
-        )
-        return structure_str_list, bboxes, time.time() - start_time
+        structure_str_list = get_struct_str(html_tokens)
+
+        return structure_str_list, bboxes, time.perf_counter() - start_time
+
+    def preprocess_img(self, image: np.ndarray) -> torch.Tensor:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = Image.fromarray(image)
+        image = self.transform(image).unsqueeze(0).to(self.device)
+        return image
 
     def decode_tokens(self, context):
         pred_html = context[0]
@@ -162,8 +113,7 @@ class UniTableStructure:
         td_pattern = re.compile(r"<td(.*?)>(.*?)</td>", re.DOTALL)
         bbox_pattern = re.compile(r"\[ bbox-(\d+) bbox-(\d+) bbox-(\d+) bbox-(\d+) \]")
 
-        decoded_list = []
-        bbox_coords = []
+        decoded_list, bbox_coords = [], []
 
         # 查找所有的 <tr> 标签
         for tr_match in tr_pattern.finditer(pred_html):
@@ -197,7 +147,7 @@ class UniTableStructure:
                     bbox_coords.append(np.array([0, 0, 0, 0, 0, 0, 0, 0]))
             decoded_list.append("</tr>")
 
-        bbox_coords_array = np.array(bbox_coords)
+        bbox_coords_array = np.array(bbox_coords).astype(np.float32)
         return bbox_coords_array, decoded_list
 
     def loop_decode(self, context, eos_id_tensor, memory):
