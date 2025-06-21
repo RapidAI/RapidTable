@@ -5,7 +5,7 @@
 
 <a href="https://huggingface.co/spaces/Joker1212/TableDetAndRec" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Online Demo-blue"></a>
 <a href="https://www.modelscope.cn/studios/RapidAI/TableRec/summary" target="_blank"><img src="https://img.shields.io/badge/魔搭-Demo-blue"></a>
-<a href=""><img src="https://img.shields.io/badge/Python->=3.6,<3.13-aff.svg"></a>
+<a href=""><img src="https://img.shields.io/badge/Python->=3.6-aff.svg"></a>
 <a href=""><img src="https://img.shields.io/badge/OS-Linux%2C%20Win%2C%20Mac-pink.svg"></a>
 <a href="https://pypi.org/project/rapid-table/"><img alt="PyPI" src="https://img.shields.io/pypi/v/rapid-table"></a>
 <a href="https://pepy.tech/project/rapid-table"><img src="https://static.pepy.tech/personalized-badge/rapid-table?period=total&units=abbreviation&left_color=grey&right_color=blue&left_text=Downloads"></a>
@@ -14,7 +14,7 @@
 
 </div>
 
-### 简介
+### 🌟 简介
 
 RapidTable库是专门用来文档类图像的表格结构还原，表格结构模型均属于序列预测方法，结合RapidOCR，将给定图像中的表格转化对应的HTML格式。
 
@@ -22,20 +22,20 @@ slanet_plus是paddlex内置的SLANet升级版模型，准确率有大幅提升
 
 unitable是来源unitable的transformer模型，精度最高，暂仅支持pytorch推理，支持gpu推理加速,训练权重来源于 [OhMyTable项目](https://github.com/Sanster/OhMyTable)
 
-### 最近动态
+### 📅 最近动态
 
 2025-01-09 update: 发布v1.x，全新接口升级。 \
 2024.12.30 update：支持Unitable模型的表格识别，使用pytorch框架 \
 2024.11.24 update：支持gpu推理，适配 rapidOCR 单字识别匹配,支持逻辑坐标返回及可视化 \
 2024.10.13 update：补充最新paddlex-SLANet-plus 模型(paddle2onnx原因暂不能支持onnx)
 
-### 效果展示
+### 📸 效果展示
 
 <div align="center">
     <img src="https://github.com/RapidAI/RapidTable/releases/download/assets/preview.gif" alt="Demo" width="80%" height="80%">
 </div>
 
-### 模型列表
+### 🧩 模型列表
 
 |      `model_type`      |                  模型名称                  | 推理框架 |模型大小 |推理耗时(单图 60KB)|
   |:--------------|:--------------------------------------| :------: |:------ |:------ |
@@ -51,7 +51,15 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 模型下载地址：[link](https://www.modelscope.cn/models/RapidAI/RapidTable/files)
 
-### 安装
+### 🛠️ 安装
+
+版本依赖关系如下：
+
+|`rapid_table`|OCR|
+|:---:|:---|
+|v0.x|`rapidocr_onnxruntime`|
+|v1.x|`rapidocr>=2.0.0,<3.0.0`|
+|v2.x|`rapidocr>=3.0.0`|
 
 由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径。注意仅限于我们现支持的`model_type`。
 
@@ -69,9 +77,9 @@ pip uninstall onnxruntime
 pip install onnxruntime-gpu # for onnx gpu inference
 ```
 
-### 使用方式
+### 🚀 使用方式
 
-#### python脚本运行
+#### 🐍 Python脚本运行
 
 > ⚠️注意：在`rapid_table>=1.0.0`之后，模型输入均采用dataclasses封装，简化和兼容参数传递。输入和输出定义如下：
 
@@ -155,15 +163,15 @@ vis_imged = viser(img_path, table_results, save_html_path, save_drawed_path, sav
 print(f"The results has been saved {save_dir}")
 ```
 
-#### 终端运行
+#### 📦 终端运行
 
 ```bash
 rapid_table -v -img test_images/table.jpg
 ```
 
-### 结果
+### 📝 结果
 
-#### 返回结果
+#### 📎 返回结果
 
 <details>
 
@@ -296,14 +304,14 @@ rapid_table -v -img test_images/table.jpg
 
 </details>
 
-#### 可视化结果
+#### 🖼️ 可视化结果
 
 <div align="center">
     <table><tr><td>Methods</td><td></td><td></td><td></td><td>FPS</td></tr><tr><td>SegLink [26]</td><td>70.0</td><td>86d><td.0</td><td>77.0</td><td>8.9</td></tr><tr><td>PixelLink [4]</td><td>73.2</td><td>83.0</td><td>77.8</td><td></td></tr><tr><td>TextSnake [18]</td><td>73.9</td><td>83.2</td><td>78.3</td><td>1.1</td></tr><tr><td>TextField [37]</td><td>75.9</td><td>87.4</td><td>81.3</td><td>5.2</td></tr><tr><td>MSR[38]</td><td>76.7</td><td>87.87.4</td><td>81.7</td><td></td></tr><tr><td>FTSN [3]</td><td>77.1</td><td>87.6</td><td>82.0</td><td></td></tr><tr><td>LSE[30]</td><td>81.7</td><td>84.2</td><td>82.9</td><><ttd></td></tr><tr><td>CRAFT [2]</td><td>78.2</td><td>88.2</td><td>82.9</td><td>8.6</td></tr><tr><td>MCN[16]</td><td>79</td><td>88</td><td>83</td><td></td></tr><tr><td>ATRR</>[35]</td><td>82.1</td><td>85.2</td><td>83.6</td><td></td></tr><tr><td>PAN [34]</td><td>83.8</td><td>84.4</td><td>84.1</td><td>30.2</td></tr><tr><td>DB[12]</td><td>79.2</t91/d><td>91.5</td><td>84.9</td><td>32.0</td></tr><tr><td>DRRG[41]</td><td>82.30</td><td>88.05</td><td>85.08</td><td></td></tr><tr><td>Ours (SynText)</td><td>80.68</td><td>85<t..40</td><td>82.97</td><td>12.68</td></tr><tr><td>Ours (MLT-17)</td><td>84.54</td><td>86.62</td><td>85.57</td><td>12.31</td></tr></table>
 
 </div>
 
-### 与[TableStructureRec](https://github.com/RapidAI/TableStructureRec)关系
+### 🔄 与[TableStructureRec](https://github.com/RapidAI/TableStructureRec)关系
 
 TableStructureRec库是一个表格识别算法的集合库，当前有`wired_table_rec`有线表格识别算法和`lineless_table_rec`无线表格识别算法的推理包。
 
@@ -313,7 +321,7 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 
 关于表格识别算法的比较，可参见[TableStructureRec测评](https://github.com/RapidAI/TableStructureRec#指标结果)
 
-### 更新日志
+### 📌 更新日志
 
 <details>
 
