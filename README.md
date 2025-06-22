@@ -24,6 +24,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 ### 📅 最近动态
 
+2025-06-22 update: 发布v2.x，适配rapidocr v3.x \
 2025-01-09 update: 发布v1.x，全新接口升级。 \
 2024.12.30 update：支持Unitable模型的表格识别，使用pytorch框架 \
 2024.11.24 update：支持gpu推理，适配 rapidOCR 单字识别匹配,支持逻辑坐标返回及可视化 \
@@ -89,7 +90,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 ### 🧩 模型列表
 
 |      `model_type`      |                  模型名称                  | 推理框架 |模型大小 |推理耗时(单图 60KB)|
-  |:--------------|:--------------------------------------| :------: |:------ |:------ |
+|:--------------|:--------------------------------------| :------: |:------ |:------ |
 |       `ppstructure_en`       | `en_ppstructure_mobile_v2_SLANet.onnx` |   onnxruntime   |7.3M |0.15s |
 |       `ppstructure_zh`       | `ch_ppstructure_mobile_v2_SLANet.onnx` |   onnxruntime   |7.4M |0.15s |
 | `slanet_plus` |          `slanet-plus.onnx`           |  onnxruntime    |6.8M |0.15s |
@@ -114,7 +115,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径。注意仅限于我们现支持的`model_type`。
 
-> > ⚠️注意：`rapid_table>=v1.0.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr`包。
+> ⚠️注意：`rapid_table>=v1.0.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr`包。
 >
 > ⚠️注意：`rapid_table>=v0.1.0,<1.0.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr_onnxruntime`包。
 
@@ -366,7 +367,7 @@ RapidTable是整理自PP-Structure中表格识别部分而来。由于PP-Structu
 
 关于表格识别算法的比较，可参见[TableStructureRec测评](https://github.com/RapidAI/TableStructureRec#指标结果)
 
-### 📌 更新日志
+### 📌 更新日志 ([more](https://github.com/RapidAI/RapidTable/releases))
 
 <details>
 
