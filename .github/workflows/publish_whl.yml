@@ -29,12 +29,8 @@ jobs:
           wget $DEFAULT_MODEL -P rapid_table/models
 
           pip install -r requirements.txt
-          pip install rapidocr
-          pip install torch
-          pip install torchvision
-          pip install tokenizers
-          pip install pytest
-          pytest tests/test_main.py
+          pip install rapidocr onnxruntime torch torchvision tokenizers pytest
+          pytest tests/*.py
 
   GenerateWHL_PushPyPi:
     needs: UnitTesting
