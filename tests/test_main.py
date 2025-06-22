@@ -24,7 +24,7 @@ img_path = str(test_file_dir / "table.jpg")
 
 @pytest.mark.parametrize(
     "command, expected_output",
-    [(f"--img_path {img_path} --model_type slanet_plus", 1274)],
+    [(f"{img_path} --model_type slanet_plus", 1274)],
 )
 def test_main(capsys, command, expected_output):
     main(shlex.split(command))

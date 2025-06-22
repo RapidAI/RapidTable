@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 import re
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 import cv2
 import numpy as np
@@ -28,7 +28,6 @@ class UniTableStructure:
         self.model = get_engine(cfg["engine_type"])(cfg)
 
         self.encoder = self.model.encoder
-        self.decoder = self.model.decoder
         self.device = self.model.device
 
         self.vocab = self.model.vocab
@@ -66,33 +65,37 @@ class UniTableStructure:
             ]
         )
 
+        self.decoder = self.model.decoder
+        self.decoder.setup_caches(
+            max_batch_size=1,
+            max_seq_length=self.max_seq_len,
+            dtype=torch.float32,
+            device=self.device,
+        )
+
     @torch.inference_mode()
-    def __call__(self, image: np.ndarray):
+    def __call__(self, image: np.ndarray) -> Tuple[List[str], np.ndarray, float]:
         start_time = time.perf_counter()
 
         ori_h, ori_w = image.shape[:2]
         image = self.preprocess_img(image)
 
-        self.decoder.setup_caches(
-            max_batch_size=1,
-            max_seq_length=self.max_seq_len,
-            dtype=image.dtype,
-            device=self.device,
-        )
         memory = self.encoder(image)
         context = self.loop_decode(self.context, self.eos_id_tensor, memory)
         bboxes, html_tokens = self.decode_tokens(context)
+        bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
+        structure_list = get_struct_str(html_tokens)
+        elapse = time.perf_counter() - start_time
+        return structure_list, bboxes, elapse
 
-        # rescale boxes
+    def rescale_bboxes(self, ori_h, ori_w, bboxes):
         scale_h = ori_h / self.img_size
         scale_w = ori_w / self.img_size
         bboxes[:, 0::2] *= scale_w  # 缩放 x 坐标
         bboxes[:, 1::2] *= scale_h  # 缩放 y 坐标
         bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, ori_w - 1)
         bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, ori_h - 1)
-        structure_str_list = get_struct_str(html_tokens)
-
-        return structure_str_list, bboxes, time.perf_counter() - start_time
+        return bboxes
 
     def preprocess_img(self, image: np.ndarray) -> torch.Tensor:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)

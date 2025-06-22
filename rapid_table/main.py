@@ -7,7 +7,6 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
-import cv2
 import numpy as np
 
 from .model_processor.main import ModelProcessor
@@ -18,7 +17,6 @@ from .utils import (
     ModelType,
     RapidTableInput,
     RapidTableOutput,
-    VisTable,
     import_package,
 )
 
@@ -130,6 +128,15 @@ class RapidTable:
 
 def parse_args(arg_list: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("img_path", type=Path, help="Path to image for layout.")
+    parser.add_argument(
+        "-m",
+        "--model_type",
+        type=str,
+        default=ModelType.SLANETPLUS.value,
+        choices=[v.value for v in ModelType],
+        help="Supported table rec models",
+    )
     parser.add_argument(
         "-v",
         "--vis",
@@ -137,22 +144,13 @@ def parse_args(arg_list: Optional[List[str]] = None):
         default=False,
         help="Wheter to visualize the layout results.",
     )
-    parser.add_argument(
-        "-img", "--img_path", type=str, required=True, help="Path to image for layout."
-    )
-    parser.add_argument(
-        "-m",
-        "--model_type",
-        type=str,
-        default=ModelType.SLANETPLUS.value,
-        choices=[v.value for v in ModelType],
-    )
     args = parser.parse_args(arg_list)
     return args
 
 
 def main(arg_list: Optional[List[str]] = None):
     args = parse_args(arg_list)
+    img_path = args.img_path
 
     input_args = RapidTableInput(model_type=ModelType(args.model_type))
     table_engine = RapidTable(input_args)
@@ -160,23 +158,16 @@ def main(arg_list: Optional[List[str]] = None):
     if table_engine.ocr_engine is None:
         raise ValueError("ocr engine is None")
 
-    img = cv2.imread(args.img_path)
-
-    rapid_ocr_output = table_engine.ocr_engine(img)
+    rapid_ocr_output = table_engine.ocr_engine(img_path)
     ocr_result = list(
         zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
     )
-    table_results = table_engine(img, ocr_result)
+    table_results = table_engine(img_path, ocr_result)
     print(table_results.pred_html)
 
-    viser = VisTable()
     if args.vis:
-        img_path = Path(args.img_path)
-
         save_dir = img_path.resolve().parent
-        save_html_path = save_dir / f"{Path(img_path).stem}.html"
-        save_drawed_path = save_dir / f"vis_{Path(img_path).name}"
-        viser(img_path, table_results, save_html_path, save_drawed_path)
+        table_results.vis(save_dir, save_name=img_path.stem)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from omegaconf import DictConfig
 from onnxruntime import GraphOptimizationLevel, InferenceSession, SessionOptions
 
 from ...utils.logger import Logger
@@ -35,11 +36,12 @@ class OrtInferSession(InferSession):
         model_path = Path(model_path)
         self._verify_model(model_path)
 
-        if not cfg["engine_cfg"]:
-            cfg["engine_cfg"] = self.engine_cfg[cfg["engine_type"].value]
+        engine_cfg = self.update_params(
+            self.engine_cfg[cfg["engine_type"].value], cfg["engine_cfg"]
+        )
 
-        sess_opt = self._init_sess_opts(cfg["engine_cfg"])
-        provider_cfg = ProviderConfig(engine_cfg=cfg["engine_cfg"])
+        sess_opt = self._init_sess_opts(engine_cfg)
+        provider_cfg = ProviderConfig(engine_cfg=engine_cfg)
         self.session = InferenceSession(
             model_path,
             sess_options=sess_opt,
@@ -48,7 +50,7 @@ class OrtInferSession(InferSession):
         provider_cfg.verify_providers(self.session.get_providers())
 
     @staticmethod
-    def _init_sess_opts(cfg: Dict[str, Any]) -> SessionOptions:
+    def _init_sess_opts(cfg: DictConfig) -> SessionOptions:
         sess_opt = SessionOptions()
         sess_opt.log_severity_level = 4
         sess_opt.enable_cpu_mem_arena = cfg.get("enable_cpu_mem_arena", False)

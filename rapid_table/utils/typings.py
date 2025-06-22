@@ -8,6 +8,7 @@ from typing import Dict, Optional, Union
 
 import numpy as np
 
+from .utils import mkdir
 from .vis import VisTable
 
 
@@ -45,6 +46,7 @@ class RapidTableOutput:
     ) -> np.ndarray:
         vis = VisTable()
 
+        mkdir(save_dir)
         save_html_path = Path(save_dir) / f"{save_name}.html"
         save_drawed_path = Path(save_dir) / f"{save_name}_vis.jpg"
         save_logic_points_path = Path(save_dir) / f"{save_name}_col_row_vis.jpg"

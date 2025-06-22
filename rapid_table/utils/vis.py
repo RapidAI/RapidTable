@@ -6,12 +6,13 @@ from typing import Optional
 import cv2
 import numpy as np
 
+from .logger import Logger
 from .utils import save_img, save_txt
 
 
 class VisTable:
     def __init__(self):
-        pass
+        self.logger = Logger(logger_name=__name__).get_log()
 
     def __call__(
         self,
@@ -26,6 +27,7 @@ class VisTable:
         if save_html_path:
             html_with_border = self.insert_border_style(pred_html)
             save_txt(save_html_path, html_with_border)
+            self.logger.info(f"Save HTML to {save_html_path}")
 
         if cell_bboxes is None:
             return None
@@ -33,14 +35,16 @@ class VisTable:
         drawed_img = self.draw(img, cell_bboxes)
         if save_drawed_path:
             save_img(save_drawed_path, drawed_img)
+            self.logger.info(f"Saved table struacter result to {save_drawed_path}")
 
         if save_logic_path and logic_points:
             self.plot_rec_box_with_logic_info(
                 img, save_logic_path, logic_points, cell_bboxes
             )
+            self.logger.info(f"Saved rec and box result to {save_logic_path}")
         return drawed_img
 
-    def insert_border_style(self, table_html_str: str):
+    def insert_border_style(self, table_html_str: str) -> str:
         style_res = """<meta charset="UTF-8"><style>
         table {
             border-collapse: collapse;

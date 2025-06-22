@@ -5,6 +5,7 @@ import platform
 from enum import Enum
 from typing import Any, Dict, List, Sequence, Tuple
 
+from omegaconf import DictConfig
 from onnxruntime import get_available_providers, get_device
 
 from ...utils.logger import Logger
@@ -18,7 +19,7 @@ class EP(Enum):
 
 
 class ProviderConfig:
-    def __init__(self, engine_cfg: Dict[str, Any]):
+    def __init__(self, engine_cfg: DictConfig):
         self.logger = Logger(logger_name=__name__).get_log()
 
         self.had_providers: List[str] = get_available_providers()

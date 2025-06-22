@@ -3,9 +3,10 @@
 # @Contact: liekkaskono@163.com
 import abc
 from pathlib import Path
-from typing import Union
+from typing import Any, Dict, Union
 
 import numpy as np
+from omegaconf import DictConfig, OmegaConf
 
 from ..utils import EngineType, Logger, import_package, read_yaml
 
@@ -40,6 +41,12 @@ class InferSession(abc.ABC):
     @abc.abstractmethod
     def have_key(self, key: str = "character") -> bool:
         pass
+
+    @staticmethod
+    def update_params(cfg: DictConfig, params: Dict[str, Any]):
+        for k, v in params.items():
+            OmegaConf.update(cfg, k, v)
+        return cfg
 
 
 def get_engine(engine_type: EngineType):

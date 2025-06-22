@@ -4,3 +4,4 @@ numpy>=1.21.6
 Pillow
 requests
 colorlog
+omegaconf

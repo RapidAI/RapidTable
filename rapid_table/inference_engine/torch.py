@@ -19,11 +19,13 @@ class TorchInferSession(InferSession):
     def __init__(self, cfg) -> None:
         self.logger = Logger(logger_name=__name__).get_log()
 
-        self.engine_cfg = self.engine_cfg[cfg["engine_type"].value]
+        engine_cfg = self.update_params(
+            self.engine_cfg[cfg["engine_type"].value], cfg["engine_cfg"]
+        )
 
         self.device = "cpu"
-        if self.engine_cfg.use_cuda:
-            self.device = f"cuda:{self.engine_cfg.gpu_id}"
+        if engine_cfg.use_cuda:
+            self.device = f"cuda:{engine_cfg.gpu_id}"
 
         model_info = cfg["model_dir_or_path"]
         self.encoder = self._init_model(model_info["encoder"], Encoder)
