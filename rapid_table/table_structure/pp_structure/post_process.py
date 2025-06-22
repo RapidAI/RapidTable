@@ -15,9 +15,9 @@ class TableLabelDecode:
                 dict_character.remove("<td>")
 
         dict_character = self.add_special_char(dict_character)
-        self.dict = {}
+        self.char_to_index = {}
         for i, char in enumerate(dict_character):
-            self.dict[char] = i
+            self.char_to_index[char] = i
 
         self.character = dict_character
         self.td_token = ["<td>", "<td", "<td></td>"]
@@ -40,7 +40,7 @@ class TableLabelDecode:
     def decode(self, structure_probs, bbox_preds, shape_list):
         """convert text-label into text-index."""
         ignored_tokens = self.get_ignored_tokens()
-        end_idx = self.dict[self.end_str]
+        end_idx = self.char_to_index[self.end_str]
 
         structure_idx = structure_probs.argmax(axis=2)
         structure_probs = structure_probs.max(axis=2)
@@ -80,7 +80,7 @@ class TableLabelDecode:
         gt_bbox_list = batch[2]
         shape_list = batch[-1]
         ignored_tokens = self.get_ignored_tokens()
-        end_idx = self.dict[self.end_str]
+        end_idx = self.char_to_index[self.end_str]
 
         structure_batch_list = []
         bbox_batch_list = []
@@ -124,10 +124,10 @@ class TableLabelDecode:
 
     def get_beg_end_flag_idx(self, beg_or_end):
         if beg_or_end == "beg":
-            return np.array(self.dict[self.beg_str])
+            return np.array(self.char_to_index[self.beg_str])
 
         if beg_or_end == "end":
-            return np.array(self.dict[self.end_str])
+            return np.array(self.char_to_index[self.end_str])
 
         raise TypeError(f"unsupport type {beg_or_end} in get_beg_end_flag_idx")
 
