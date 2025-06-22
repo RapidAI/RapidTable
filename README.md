@@ -35,6 +35,57 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
     <img src="https://github.com/RapidAI/RapidTable/releases/download/assets/preview.gif" alt="Demo" width="80%" height="80%">
 </div>
 
+### 🖥️ 支持设备
+
+通过ONNXRuntime推理引擎支持：
+
+- DirectML
+- 昇腾NPU
+
+具体使用方法：
+
+1. 安装（需要卸载其他onnxruntime）:
+
+    ```bash
+    # DirectML
+    pip install onnxruntime-directml
+
+    # 昇腾NPU
+    pip install onnxruntime-cann
+    ```
+
+2. 使用：
+
+    ```python
+    from rapidocr import RapidOCR
+
+    from rapid_table import ModelType, RapidTable, RapidTableInput
+
+    # DirectML
+    ocr_engine = RapidOCR(params={"EngineConfig.onnxruntime.use_dml": True})
+    input_args = RapidTableInput(
+        model_type=ModelType.SLANETPLUS, engine_cfg={"use_dml": True}
+    )
+
+    # 昇腾NPU
+    ocr_engine = RapidOCR(params={"EngineConfig.onnxruntime.use_cann": True})
+
+    input_args = RapidTableInput(
+        model_type=ModelType.SLANETPLUS,
+        engine_cfg={"use_cann": True, "cann_ep_cfg.gpu_id": 1},
+    )
+
+    table_engine = RapidTable(input_args)
+
+    img_path = "<https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg>"
+    rapid_ocr_output = ocr_engine(img_path)
+    ocr_result = list(
+        zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
+    )
+    results = table_engine(img_path, ocr_result)
+    results.vis(save_dir="outputs", save_name="vis")
+    ```
+
 ### 🧩 模型列表
 
 |      `model_type`      |                  模型名称                  | 推理框架 |模型大小 |推理耗时(单图 60KB)|
@@ -95,7 +146,7 @@ class ModelType(Enum):
     UNITABLE = "unitable"
 ```
 
-##### CPU
+##### CPU使用
 
 ```python
 
@@ -126,7 +177,7 @@ results = table_engine(img_path, ocr_result)
 results.vis(save_dir="outputs", save_name="vis")
 ```
 
-##### GPU
+##### GPU使用
 
 ```python
 
@@ -138,12 +189,12 @@ ocr_engine = RapidOCR()
 
 # onnxruntime-gpu
 input_args = RapidTableInput(
-    model_type=ModelType.UNITABLE, engine_cfg={"use_cuda": True, "gpu_id": 1}
+    model_type=ModelType.SLANETPLUS, engine_cfg={"use_cuda": True, "gpu_id": 1}
 )
 
 # torch gpu
 # input_args = RapidTableInput(
-#     model_type=ModelType.SLANETPLUS,
+#     model_type=ModelType.UNITABLE,
 #     engine_cfg={"use_cuda": True, "cuda_ep_cfg.gpu_id": 1},
 # )
 table_engine = RapidTable(input_args)
