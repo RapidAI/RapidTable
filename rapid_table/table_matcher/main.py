@@ -25,6 +25,7 @@ class TableMatch:
     def __call__(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
         if self.filter_ocr_result:
             dt_boxes, rec_res = self._filter_ocr_result(cell_bboxes, dt_boxes, rec_res)
+
         matched_index = self.match_result(dt_boxes, cell_bboxes)
         pred_html, pred = self.get_pred_html(pred_structures, matched_index, rec_res)
         return pred_html

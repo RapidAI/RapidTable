@@ -17,6 +17,7 @@ from .utils import (
     ModelType,
     RapidTableInput,
     RapidTableOutput,
+    get_boxes_recs,
     import_package,
 )
 
@@ -34,7 +35,11 @@ class RapidTable:
 
         self.cfg = cfg
         self.table_structure = self._init_table_structer()
-        self.ocr_engine = self._init_ocr_engine()
+
+        self.ocr_engine = None
+        if cfg.use_ocr:
+            self.ocr_engine = self._init_ocr_engine()
+
         self.table_matcher = TableMatch()
         self.load_img = LoadImage()
 
@@ -58,72 +63,48 @@ class RapidTable:
     def __call__(
         self,
         img_content: Union[str, np.ndarray, bytes, Path],
-        ocr_result: Optional[List[Union[List[List[float]], str, str]]] = None,
+        ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
     ) -> RapidTableOutput:
-        if self.ocr_engine is None and ocr_result is None:
-            raise ValueError(
-                "One of two conditions must be met: ocr_result is not empty, or rapidocr is installed."
-            )
+        s = time.perf_counter()
 
         img = self.load_img(img_content)
 
-        s = time.perf_counter()
-        h, w = img.shape[:2]
+        dt_boxes, rec_res = self.get_ocr_results(img, ocr_results)
+        pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(img)
+        pred_html = self.get_table_matcher(
+            pred_structures, cell_bboxes, dt_boxes, rec_res
+        )
 
-        if ocr_result is None:
-            ocr_result = self.ocr_engine(img)
-            ocr_result = list(
-                zip(
-                    ocr_result.boxes,
-                    ocr_result.txts,
-                    ocr_result.scores,
-                )
-            )
-        dt_boxes, rec_res = self.get_boxes_recs(ocr_result, h, w)
-
-        pred_structures, cell_bboxes, _ = self.table_structure(img)
-
-        # 适配slanet-plus模型输出的box缩放还原
-        if self.cfg.model_type == ModelType.SLANETPLUS:
-            cell_bboxes = self.adapt_slanet_plus(img, cell_bboxes)
-
-        pred_html = self.table_matcher(pred_structures, cell_bboxes, dt_boxes, rec_res)
-
-        # 过滤掉占位的bbox
-        mask = ~np.all(cell_bboxes == 0, axis=1)
-        cell_bboxes = cell_bboxes[mask]
-
-        logic_points = self.table_matcher.decode_logic_points(pred_structures)
         elapse = time.perf_counter() - s
         return RapidTableOutput(img, pred_html, cell_bboxes, logic_points, elapse)
 
-    def get_boxes_recs(
-        self, ocr_result: List[Union[List[List[float]], str, str]], h: int, w: int
-    ) -> Tuple[np.ndarray, Tuple[str, str]]:
-        dt_boxes, rec_res, scores = list(zip(*ocr_result))
-        rec_res = list(zip(rec_res, scores))
+    def get_ocr_results(
+        self, img: np.ndarray, ocr_results: Tuple[np.ndarray, Tuple[str], Tuple[float]]
+    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        if ocr_results is not None:
+            return get_boxes_recs(ocr_results, img.shape[:2])
 
-        r_boxes = []
-        for box in dt_boxes:
-            box = np.array(box)
-            x_min = max(0, box[:, 0].min() - 1)
-            x_max = min(w, box[:, 0].max() + 1)
-            y_min = max(0, box[:, 1].min() - 1)
-            y_max = min(h, box[:, 1].max() + 1)
-            box = [x_min, y_min, x_max, y_max]
-            r_boxes.append(box)
-        dt_boxes = np.array(r_boxes)
-        return dt_boxes, rec_res
+        if not self.cfg.use_ocr:
+            return None, None
 
-    def adapt_slanet_plus(self, img: np.ndarray, cell_bboxes: np.ndarray) -> np.ndarray:
-        h, w = img.shape[:2]
-        resized = 488
-        ratio = min(resized / h, resized / w)
-        w_ratio = resized / (w * ratio)
-        h_ratio = resized / (h * ratio)
-        cell_bboxes[:, 0::2] *= w_ratio
-        cell_bboxes[:, 1::2] *= h_ratio
-        return cell_bboxes
+        ori_ocr_res = self.ocr_engine(img)
+        if ori_ocr_res.boxes is None:
+            logger.warning("OCR Result is empty")
+            return None, None
+
+        ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
+        return get_boxes_recs(ocr_results, img.shape[:2])
+
+    def get_table_rec_results(self, img: np.ndarray):
+        pred_structures, cell_bboxes, _ = self.table_structure(img)
+        logic_points = self.table_matcher.decode_logic_points(pred_structures)
+        return pred_structures, cell_bboxes, logic_points
+
+    def get_table_matcher(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
+        if dt_boxes is None and rec_res is None:
+            return None
+
+        return self.table_matcher(pred_structures, cell_bboxes, dt_boxes, rec_res)
 
 
 def parse_args(arg_list: Optional[List[str]] = None):
@@ -158,11 +139,9 @@ def main(arg_list: Optional[List[str]] = None):
     if table_engine.ocr_engine is None:
         raise ValueError("ocr engine is None")
 
-    rapid_ocr_output = table_engine.ocr_engine(img_path)
-    ocr_result = list(
-        zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
-    )
-    table_results = table_engine(img_path, ocr_result)
+    ori_ocr_res = table_engine.ocr_engine(img_path)
+    ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
+    table_results = table_engine(img_path, ocr_results=ocr_results)
     print(table_results.pred_html)
 
     if args.vis:

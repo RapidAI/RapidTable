@@ -24,7 +24,7 @@ class VisTable:
         save_drawed_path: Optional[str] = None,
         save_logic_path: Optional[str] = None,
     ):
-        if save_html_path:
+        if pred_html and save_html_path:
             html_with_border = self.insert_border_style(pred_html)
             save_txt(save_html_path, html_with_border)
             self.logger.info(f"Save HTML to {save_html_path}")

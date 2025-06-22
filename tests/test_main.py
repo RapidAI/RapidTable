@@ -22,6 +22,23 @@ test_file_dir = cur_dir / "test_files"
 img_path = str(test_file_dir / "table.jpg")
 
 
+def test_only_table():
+    img_path = test_file_dir / "table_without_txt.jpg"
+    table_engine = RapidTable(RapidTableInput(use_ocr=False))
+    results = table_engine(img_path)
+
+    assert results.pred_html is None
+    assert results.cell_bboxes.shape == (16, 8)
+
+
+def test_without_txt_table():
+    img_path = test_file_dir / "table_without_txt.jpg"
+    results = table_engine(img_path)
+
+    assert results.pred_html is None
+    assert results.cell_bboxes.shape == (16, 8)
+
+
 @pytest.mark.parametrize(
     "command, expected_output",
     [(f"{img_path} --model_type slanet_plus", 1274)],
@@ -40,12 +57,12 @@ def test_main(capsys, command, expected_output):
     ],
 )
 def test_ocr_input(model_type, engine_type):
-    ocr_res = ocr_engine(img_path)
-    ocr_result = list(zip(ocr_res.boxes, ocr_res.txts, ocr_res.scores))
+    ori_ocr_res = ocr_engine(img_path)
+    ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
 
     input_args = RapidTableInput(model_type=model_type, engine_type=engine_type)
     table_engine = RapidTable(input_args)
-    table_results = table_engine(img_path, ocr_result)
+    table_results = table_engine(img_path, ocr_results=ocr_results)
     assert table_results.pred_html.count("<tr>") == 16
 
 

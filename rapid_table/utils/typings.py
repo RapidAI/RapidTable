@@ -29,6 +29,8 @@ class RapidTableInput:
     model_type: Optional[ModelType] = ModelType.SLANETPLUS
     model_dir_or_path: Union[str, Path, None, Dict[str, str]] = None
 
+    use_ocr: bool = True
+
     engine_type: Optional[EngineType] = None
     engine_cfg: dict = field(default_factory=dict)
 
