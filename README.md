@@ -3,7 +3,7 @@
     <h1><b>📊 Rapid Table</b></h1>
   </div>
 
-<a href="https://huggingface.co/spaces/Joker1212/TableDetAndRec" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Online Demo-blue"></a>
+<a href="https://huggingface.co/spaces/RapidAI/TableStructureRec" target="_blank"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Online Demo-blue"></a>
 <a href="https://www.modelscope.cn/studios/RapidAI/TableRec/summary" target="_blank"><img src="https://img.shields.io/badge/魔搭-Demo-blue"></a>
 <a href=""><img src="https://img.shields.io/badge/Python->=3.6-aff.svg"></a>
 <a href=""><img src="https://img.shields.io/badge/OS-Linux%2C%20Win%2C%20Mac-pink.svg"></a>
@@ -35,6 +35,57 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
     <img src="https://github.com/RapidAI/RapidTable/releases/download/assets/preview.gif" alt="Demo" width="80%" height="80%">
 </div>
 
+### 🖥️ 支持设备
+
+通过ONNXRuntime推理引擎支持：
+
+- DirectML
+- 昇腾NPU
+
+具体使用方法：
+
+1. 安装（需要卸载其他onnxruntime）:
+
+    ```bash
+    # DirectML
+    pip install onnxruntime-directml
+
+    # 昇腾NPU
+    pip install onnxruntime-cann
+    ```
+
+2. 使用：
+
+    ```python
+    from rapidocr import RapidOCR
+
+    from rapid_table import ModelType, RapidTable, RapidTableInput
+
+    # DirectML
+    ocr_engine = RapidOCR(params={"EngineConfig.onnxruntime.use_dml": True})
+    input_args = RapidTableInput(
+        model_type=ModelType.SLANETPLUS, engine_cfg={"use_dml": True}
+    )
+
+    # 昇腾NPU
+    ocr_engine = RapidOCR(params={"EngineConfig.onnxruntime.use_cann": True})
+
+    input_args = RapidTableInput(
+        model_type=ModelType.SLANETPLUS,
+        engine_cfg={"use_cann": True, "cann_ep_cfg.gpu_id": 1},
+    )
+
+    table_engine = RapidTable(input_args)
+
+    img_path = "<https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg>"
+    rapid_ocr_output = ocr_engine(img_path)
+    ocr_result = list(
+        zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
+    )
+    results = table_engine(img_path, ocr_result)
+    results.vis(save_dir="outputs", save_name="vis")
+    ```
+
 ### 🧩 模型列表
 
 |      `model_type`      |                  模型名称                  | 推理框架 |模型大小 |推理耗时(单图 60KB)|
@@ -59,11 +110,13 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 |:---:|:---|
 |v0.x|`rapidocr_onnxruntime`|
 |v1.0.x|`rapidocr>=2.0.0,<3.0.0`|
-|v1.x.0|`rapidocr>=3.0.0`|
+|v2.x|`rapidocr>=3.0.0`|
 
 由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径。注意仅限于我们现支持的`model_type`。
 
-> ⚠️注意：`rapid_table>=v0.1.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr_onnxruntime`包。
+> > ⚠️注意：`rapid_table>=v1.0.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr`包。
+>
+> ⚠️注意：`rapid_table>=v0.1.0,<1.0.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr_onnxruntime`包。
 
 ```bash
 pip install rapidocr
@@ -83,90 +136,82 @@ pip install onnxruntime-gpu # for onnx gpu inference
 
 > ⚠️注意：在`rapid_table>=1.0.0`之后，模型输入均采用dataclasses封装，简化和兼容参数传递。输入和输出定义如下：
 
+ModelType支持已有的4个模型 ([source](./rapid_table/utils/typings.py))：
+
 ```python
-# 输入
-@dataclass
-class RapidTableInput:
-    model_type: Optional[str] = ModelType.SLANETPLUS.value
-    model_path: Union[str, Path, None, Dict[str, str]] = None
-    use_cuda: bool = False
-    device: str = "cpu"
-
-# 输出
-@dataclass
-class RapidTableOutput:
-    pred_html: Optional[str] = None
-    cell_bboxes: Optional[np.ndarray] = None
-    logic_points: Optional[np.ndarray] = None
-    elapse: Optional[float] = None
-
-# 使用示例
-input_args = RapidTableInput(model_type="unitable")
-table_engine = RapidTable(input_args)
-
-img_path = 'test_images/table.jpg'
-table_results = table_engine(img_path)
-
-print(table_results.pred_html)
+class ModelType(Enum):
+    PPSTRUCTURE_EN = "ppstructure_en"
+    PPSTRUCTURE_ZH = "ppstructure_zh"
+    SLANETPLUS = "slanet_plus"
+    UNITABLE = "unitable"
 ```
 
-完整示例：
+##### CPU使用
 
 ```python
-from pathlib import Path
 
-from rapidocr import RapidOCR, VisRes
-from rapid_table import RapidTable, RapidTableInput, VisTable
+from rapidocr import RapidOCR
 
-# 开启onnx-gpu推理
-# input_args = RapidTableInput(use_cuda=True)
-# table_engine = RapidTable(input_args)
-
-# 使用torch推理版本的unitable模型
-# input_args = RapidTableInput(model_type="unitable", use_cuda=True, device="cuda:0")
-# table_engine = RapidTable(input_args)
+from rapid_table import ModelType, RapidTable, RapidTableInput
 
 ocr_engine = RapidOCR()
-vis_ocr = VisRes()
 
-# 默认是slanet_plus模型
-input_args = RapidTableInput(model_type="unitable")
+input_args = RapidTableInput(model_type=ModelType.UNITABLE)
 table_engine = RapidTable(input_args)
-viser = VisTable()
 
-img_path = "tests/test_files/table.jpg"
+img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
 
-# OCR
-rapid_ocr_output = ocr_engine(img_path, return_word_box=True)
-ocr_result = list(
-  zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
-)
 # 使用单字识别
+# rapid_ocr_output = ocr_engine(img_path, return_word_box=True)
 # word_results = rapid_ocr_output.word_results
 # ocr_result = [
-#     [word_result[2], word_result[0], word_result[1]] for word_result in word_results
+#     [word_result[0][2], word_result[0][0], word_result[0][1]]
+#     for word_result in word_results
 # ]
 
-table_results = table_engine(img_path, ocr_result)
-table_html_str, table_cell_bboxes = table_results.pred_html, table_results.cell_bboxes
-# Save
-save_dir = Path("outputs")
-save_dir.mkdir(parents=True, exist_ok=True)
+rapid_ocr_output = ocr_engine(img_path)
+ocr_result = list(
+    zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
+)
+results = table_engine(img_path, ocr_result)
+results.vis(save_dir="outputs", save_name="vis")
+```
 
-save_html_path = save_dir / f"{Path(img_path).stem}.html"
-save_drawed_path = save_dir / f"{Path(img_path).stem}_table_vis{Path(img_path).suffix}"
-save_logic_points_path = save_dir / f"{Path(img_path).stem}_table_col_row_vis{Path(img_path).suffix}"
+##### GPU使用
 
-# Visualize table rec result
-vis_imged = viser(img_path, table_results, save_html_path, save_drawed_path, save_logic_points_path)
+```python
 
-print(f"The results has been saved {save_dir}")
+from rapidocr import RapidOCR
+
+from rapid_table import ModelType, RapidTable, RapidTableInput
+
+ocr_engine = RapidOCR()
+
+# onnxruntime-gpu
+input_args = RapidTableInput(
+    model_type=ModelType.SLANETPLUS, engine_cfg={"use_cuda": True, "gpu_id": 1}
+)
+
+# torch gpu
+# input_args = RapidTableInput(
+#     model_type=ModelType.UNITABLE,
+#     engine_cfg={"use_cuda": True, "cuda_ep_cfg.gpu_id": 1},
+# )
+table_engine = RapidTable(input_args)
+
+img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
+rapid_ocr_output = ocr_engine(img_path)
+ocr_result = list(
+    zip(rapid_ocr_output.boxes, rapid_ocr_output.txts, rapid_ocr_output.scores)
+)
+results = table_engine(img_path, ocr_result)
+results.vis(save_dir="outputs", save_name="vis")
 ```
 
 #### 📦 终端运行
 
 ```bash
-rapid_table -v -img test_images/table.jpg
+rapid_table test_images/table.jpg -v
 ```
 
 ### 📝 结果
