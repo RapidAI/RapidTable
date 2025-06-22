@@ -42,7 +42,9 @@ class TorchInferSession(InferSession):
         return Tokenizer.from_file(str(vocab_path))
 
     def __call__(self, img: np.ndarray):
-        pass
+        raise NotImplementedError(
+            "Inference logic is not implemented for TorchInferSession."
+        )
 
     def have_key(self, key: str = "character") -> bool:
         return False
