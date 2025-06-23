@@ -52,7 +52,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=read_txt("requirements.txt"),
     packages=setuptools.find_packages(),
-    package_data={"": ["slanet-plus.onnx"]},
+    package_data={"": ["*.onnx", "*.yaml"]},
     keywords=["ppstructure,table,rapidocr,rapid_table"],
     classifiers=[
         "Programming Language :: Python :: 3.6",
