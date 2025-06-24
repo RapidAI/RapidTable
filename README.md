@@ -210,7 +210,7 @@ results.vis(save_dir="outputs", save_name="vis")
 #### 📦 终端运行
 
 ```bash
-rapid_table test_images/table.jpg -v
+rapid_table https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg -v
 ```
 
 ### 📝 结果

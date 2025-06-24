@@ -20,6 +20,7 @@ table_engine = RapidTable()
 
 test_file_dir = cur_dir / "test_files"
 img_path = str(test_file_dir / "table.jpg")
+img_url = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
 
 
 def test_only_table():
@@ -41,9 +42,12 @@ def test_without_txt_table():
 
 @pytest.mark.parametrize(
     "command, expected_output",
-    [(f"{img_path} --model_type slanet_plus", 1274)],
+    [
+        (f"{img_path} --model_type slanet_plus", 1274),
+        (f"{img_url} --model_type slanet_plus", 1274),
+    ],
 )
-def test_main(capsys, command, expected_output):
+def test_main_cli(capsys, command, expected_output):
     main(shlex.split(command))
     output = capsys.readouterr().out.rstrip()
     assert len(output) == expected_output

@@ -109,7 +109,7 @@ class RapidTable:
 
 def parse_args(arg_list: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("img_path", type=Path, help="Path to image for layout.")
+    parser.add_argument("img_path", type=str, help="the image path or URL of the table")
     parser.add_argument(
         "-m",
         "--model_type",
@@ -145,8 +145,8 @@ def main(arg_list: Optional[List[str]] = None):
     print(table_results.pred_html)
 
     if args.vis:
-        save_dir = img_path.resolve().parent
-        table_results.vis(save_dir, save_name=img_path.stem)
+        save_dir = Path(img_path).resolve().parent
+        table_results.vis(save_dir, save_name=Path(img_path).stem)
 
 
 if __name__ == "__main__":
