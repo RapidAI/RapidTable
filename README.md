@@ -38,7 +38,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 ### 🖥️ 支持设备
 
-通过ONNXRuntime推理引擎支持：
+通过ONNXRuntime推理引擎支持(`rapid_table>=2.0.0`)：
 
 - DirectML
 - 昇腾NPU
