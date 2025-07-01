@@ -113,7 +113,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 |v1.0.x|`rapidocr>=2.0.0,<3.0.0`|
 |v2.x|`rapidocr>=3.0.0`|
 
-由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径。注意仅限于我们现支持的`model_type`。
+由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径（`v1.0.x`  参数变量名使用`model_path`,  `v2.x` 参数变量名变更为`model_dir_or_path`）。注意仅限于我们现支持的`model_type`。
 
 > ⚠️注意：`rapid_table>=v1.0.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr`包。
 >
