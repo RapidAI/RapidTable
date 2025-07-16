@@ -19,6 +19,7 @@ from .utils import (
     RapidTableOutput,
     get_boxes_recs,
     import_package,
+    is_url,
 )
 
 logger = Logger(logger_name=__name__).get_log()
@@ -149,7 +150,7 @@ def main(arg_list: Optional[List[str]] = None):
     print(table_results.pred_html)
 
     if args.vis:
-        save_dir = Path(img_path).resolve().parent
+        save_dir = Path(".") if is_url(img_path) else Path(img_path).resolve().parent
         table_results.vis(save_dir, save_name=Path(img_path).stem)
 
 
