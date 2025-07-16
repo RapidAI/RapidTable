@@ -86,6 +86,7 @@ class RapidTable:
 
         dt_boxes, rec_res = self.get_ocr_results(img, ocr_results)
         pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(img)
+
         pred_html = self.get_table_matcher(
             pred_structures, cell_bboxes, dt_boxes, rec_res
         )

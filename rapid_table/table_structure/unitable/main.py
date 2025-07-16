@@ -66,12 +66,6 @@ class UniTableStructure:
         )
 
         self.decoder = self.model.decoder
-        self.decoder.setup_caches(
-            max_batch_size=1,
-            max_seq_length=self.max_seq_len,
-            dtype=torch.float32,
-            device=self.device,
-        )
 
     @torch.inference_mode()
     def __call__(self, image: np.ndarray) -> Tuple[List[str], np.ndarray, float]:
@@ -79,6 +73,13 @@ class UniTableStructure:
 
         ori_h, ori_w = image.shape[:2]
         image = self.preprocess_img(image)
+
+        self.decoder.setup_caches(
+            max_batch_size=1,
+            max_seq_length=self.max_seq_len,
+            dtype=torch.float32,
+            device=self.device,
+        )
 
         memory = self.encoder(image)
         context = self.loop_decode(self.context, self.eos_id_tensor, memory)
