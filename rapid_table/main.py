@@ -15,6 +15,7 @@ from .utils import (
     LoadImage,
     Logger,
     ModelType,
+    EngineType,
     RapidTableInput,
     RapidTableOutput,
     get_boxes_recs,
@@ -45,7 +46,21 @@ class RapidTable:
 
     def _init_ocr_engine(self):
         try:
-            return import_package("rapidocr").RapidOCR()
+            rapidocr_ = import_package("rapidocr")
+            if rapidocr_ is None:
+                raise ModuleNotFoundError("rapidocr package is not installed")
+            if self.cfg.engine_type == EngineType.TORCH:
+                EngineType_RapidOCR = rapidocr_.EngineType
+                return rapidocr_.RapidOCR(
+                    params={
+                        "Det.engine_type": EngineType_RapidOCR.TORCH,
+                        "Cls.engine_type": EngineType_RapidOCR.TORCH,
+                        "Rec.engine_type": EngineType_RapidOCR.TORCH,
+                        "EngineConfig.torch.use_cuda": True,  # Use torch GPU to infer
+                        "EngineConfig.torch.gpu_id": 0  # Specify GPU id
+                    }
+                )
+            return rapidocr_.RapidOCR()
         except ModuleNotFoundError:
             logger.warning("rapidocr package is not installed, only table rec")
             return None
