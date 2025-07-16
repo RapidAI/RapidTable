@@ -5,7 +5,7 @@ import argparse
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -15,7 +15,6 @@ from .utils import (
     LoadImage,
     Logger,
     ModelType,
-    EngineType,
     RapidTableInput,
     RapidTableOutput,
     get_boxes_recs,
@@ -39,31 +38,20 @@ class RapidTable:
 
         self.ocr_engine = None
         if cfg.use_ocr:
-            self.ocr_engine = self._init_ocr_engine()
+            self.ocr_engine = self._init_ocr_engine(self.cfg.ocr_params)
 
         self.table_matcher = TableMatch()
         self.load_img = LoadImage()
 
-    def _init_ocr_engine(self):
-        try:
-            rapidocr_ = import_package("rapidocr")
-            if rapidocr_ is None:
-                raise ModuleNotFoundError("rapidocr package is not installed")
-            if self.cfg.engine_type == EngineType.TORCH:
-                EngineType_RapidOCR = rapidocr_.EngineType
-                return rapidocr_.RapidOCR(
-                    params={
-                        "Det.engine_type": EngineType_RapidOCR.TORCH,
-                        "Cls.engine_type": EngineType_RapidOCR.TORCH,
-                        "Rec.engine_type": EngineType_RapidOCR.TORCH,
-                        "EngineConfig.torch.use_cuda": True,  # Use torch GPU to infer
-                        "EngineConfig.torch.gpu_id": 0  # Specify GPU id
-                    }
-                )
-            return rapidocr_.RapidOCR()
-        except ModuleNotFoundError:
+    def _init_ocr_engine(self, params: Dict[Any, Any]):
+        rapidocr_ = import_package("rapidocr")
+        if rapidocr_ is None:
             logger.warning("rapidocr package is not installed, only table rec")
             return None
+
+        if not params:
+            return rapidocr_.RapidOCR()
+        return rapidocr_.RapidOCR(params=params)
 
     def _init_table_structer(self):
         if self.cfg.model_type == ModelType.UNITABLE:

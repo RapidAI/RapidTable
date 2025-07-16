@@ -1,11 +1,17 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
-from rapidocr import RapidOCR
+from rapidocr import EngineType, RapidOCR
 
 from rapid_table import ModelType, RapidTable, RapidTableInput
 
-ocr_engine = RapidOCR()
+ocr_engine = RapidOCR(
+    params={
+        "Det.engine_type": EngineType.TORCH,
+        "Cls.engine_type": EngineType.TORCH,
+        "Rec.engine_type": EngineType.TORCH,
+    }
+)
 
 input_args = RapidTableInput(model_type=ModelType.UNITABLE)
 table_engine = RapidTable(input_args)
