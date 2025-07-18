@@ -21,7 +21,7 @@ from rapid_table.utils.typings import EngineType, ModelType
 from ...inference_engine.base import get_engine
 from ..utils import get_struct_str
 from .post_process import TableLabelDecode
-from .pre_process import TablePreprocess
+from .pre_process import TablePreprocess, BatchTablePreprocess
 
 
 class PPTableStructurer:
@@ -32,11 +32,15 @@ class PPTableStructurer:
         self.cfg = cfg
 
         self.preprocess_op = TablePreprocess()
+        self.batch_preprocess_op = BatchTablePreprocess()
 
         self.character = self.session.get_character_list()
         self.postprocess_op = TableLabelDecode(self.character)
 
-    def __call__(self, ori_img: np.ndarray) -> Tuple[List[str], np.ndarray, float]:
+    def __call__(self, ori_img: np.ndarray, batch_size: int = 4) -> Tuple[List[str], np.ndarray, float]:
+        if batch_size > 1:
+            return self.batch_process(ori_img)
+
         s = time.perf_counter()
 
         img, shape_list = self.preprocess_op(ori_img)
@@ -55,8 +59,52 @@ class PPTableStructurer:
         elapse = time.perf_counter() - s
         return table_struct_str, cell_bboxes, elapse
 
+    def batch_process(self, img_list: List[np.ndarray]) -> List[Tuple[List[str], np.ndarray, float]]:
+        """批量处理图像列表
+        Args:
+            img_list: 图像列表
+
+        Returns:
+            结果列表，每个元素包含 (table_struct_str, cell_bboxes, elapse)
+        """
+        starttime = time.perf_counter()
+
+        batch_data = self.batch_preprocess_op(img_list)
+
+        preprocessed_images = batch_data[0]
+        shape_lists = batch_data[1]
+        preprocessed_images = np.array(preprocessed_images)
+
+        bbox_preds, struct_probs = self.session(preprocessed_images)
+
+        batch_size = preprocessed_images.shape[0]
+        results = []
+
+        for i in range(batch_size):
+            single_bbox_preds = bbox_preds[i:i + 1]
+            single_struct_probs = struct_probs[i:i + 1]
+            single_shape_list = np.array([shape_lists[i]])
+
+            post_result = self.postprocess_op(single_bbox_preds, single_struct_probs, [single_shape_list])
+
+            table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
+            cell_bboxes = post_result["bbox_batch_list"][0]
+
+            if self.cfg["model_type"] == ModelType.SLANETPLUS:
+                cell_bboxes = self.rescale_cell_bboxes(img_list[i], cell_bboxes)
+
+            cell_bboxes = self.filter_blank_bbox(cell_bboxes)
+
+            results.append((table_struct_str, cell_bboxes, 0))
+
+        total_elapse = time.perf_counter() - starttime
+        for i in range(len(results)):
+            results[i] = (results[i][0], results[i][1], total_elapse / batch_size)
+
+        return results
+
     def rescale_cell_bboxes(
-        self, img: np.ndarray, cell_bboxes: np.ndarray
+            self, img: np.ndarray, cell_bboxes: np.ndarray
     ) -> np.ndarray:
         h, w = img.shape[:2]
         resized = 488
