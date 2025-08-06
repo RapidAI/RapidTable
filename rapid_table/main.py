@@ -25,13 +25,15 @@ from .utils import (
 logger = Logger(logger_name=__name__).get_log()
 root_dir = Path(__file__).resolve().parent
 
+InputType = Union[str, np.ndarray, bytes, Path]
+
 
 class RapidTable:
     def __init__(self, cfg: Optional[RapidTableInput] = None):
         if cfg is None:
             cfg = RapidTableInput()
 
-        if not cfg.model_dir_or_path:
+        if not cfg.model_dir_or_path and cfg.model_type is not None:
             cfg.model_dir_or_path = ModelProcessor.get_model_path(cfg.model_type)
 
         self.cfg = cfg
@@ -64,11 +66,38 @@ class RapidTable:
 
         return PPTableStructurer(asdict(self.cfg))
 
+    def __call__(
+        self,
+        img_content: Union[List[InputType], InputType],
+        ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
+        batch_size: int = 1,
+    ) -> RapidTableOutput:
+        img_content = (
+            [img_content] if isinstance(img_content, InputType) else img_content
+        )
+
+        if batch_size > 1:
+            return self._batch_process(img_content, ocr_results)
+
+        s = time.perf_counter()
+
+        img = self.load_img(img_content)
+
+        dt_boxes, rec_res = self.get_ocr_results(img, ocr_results)
+        pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(img)
+
+        pred_html = self.get_table_matcher(
+            pred_structures, cell_bboxes, dt_boxes, rec_res
+        )
+
+        elapse = time.perf_counter() - s
+        return RapidTableOutput(img, pred_html, cell_bboxes, logic_points, elapse)
+
     def _batch_process(
-            self,
-            img_contents: List[Union[str, np.ndarray, bytes, Path]],
-            ocr_results: Optional[List] = None,
-            batch_size: int = 4,
+        self,
+        img_contents: List[Union[str, np.ndarray, bytes, Path]],
+        ocr_results: Optional[List] = None,
+        batch_size: int = 4,
     ) -> List[RapidTableOutput]:
         """批量处理图像"""
         s = time.perf_counter()
@@ -90,7 +119,9 @@ class RapidTable:
         batch_results = self.table_structure(images, batch_size)
 
         output_results = []
-        for i, (img, (pred_structures, cell_bboxes, _)) in enumerate(zip(images, batch_results)):
+        for i, (img, (pred_structures, cell_bboxes, _)) in enumerate(
+            zip(images, batch_results)
+        ):
             logic_points = self.table_matcher.decode_logic_points(pred_structures)
             pred_html = self.get_table_matcher(
                 pred_structures, cell_bboxes, batch_dt_boxes[i], batch_rec_res[i]
@@ -104,31 +135,8 @@ class RapidTable:
 
         return output_results
 
-    def __call__(
-            self,
-            img_content: Union[str, np.ndarray, bytes, Path],
-            ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
-            batch_size: int = 1,
-    ) -> RapidTableOutput:
-        if batch_size > 1:
-            return self._batch_process(img_content, ocr_results)
-        else:
-            s = time.perf_counter()
-
-            img = self.load_img(img_content)
-
-            dt_boxes, rec_res = self.get_ocr_results(img, ocr_results)
-            pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(img)
-
-            pred_html = self.get_table_matcher(
-                pred_structures, cell_bboxes, dt_boxes, rec_res
-            )
-
-            elapse = time.perf_counter() - s
-            return RapidTableOutput(img, pred_html, cell_bboxes, logic_points, elapse)
-
     def get_ocr_results(
-            self, img: np.ndarray, ocr_results: Tuple[np.ndarray, Tuple[str], Tuple[float]]
+        self, img: np.ndarray, ocr_results: Tuple[np.ndarray, Tuple[str], Tuple[float]]
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         if ocr_results is not None:
             return get_boxes_recs(ocr_results, img.shape[:2])

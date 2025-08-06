@@ -1,22 +1,18 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
-from rapidocr import EngineType, RapidOCR
+from pathlib import Path
+
+from rapidocr import RapidOCR
 
 from rapid_table import ModelType, RapidTable, RapidTableInput
 
-ocr_engine = RapidOCR(
-    params={
-        "Det.engine_type": EngineType.TORCH,
-        "Cls.engine_type": EngineType.TORCH,
-        "Rec.engine_type": EngineType.TORCH,
-    }
-)
+ocr_engine = RapidOCR()
 
-input_args = RapidTableInput(model_type=ModelType.UNITABLE)
+input_args = RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH)
 table_engine = RapidTable(input_args)
 
-img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
+# img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
 
 # # 使用单字识别
 # ori_ocr_res = ocr_engine(img_path, return_word_box=True)
@@ -26,7 +22,10 @@ img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main
 # ]
 # ocr_results = list(zip(*ocr_results))
 
-ori_ocr_res = ocr_engine(img_path)
-ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-results = table_engine(img_path, ocr_results=ocr_results)
-results.vis(save_dir="outputs", save_name="vis")
+img_list = list(Path("images").iterdir())
+for img_path in img_list:
+    ori_ocr_res = ocr_engine(img_path)
+    ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
+
+    results = table_engine(img_path, ocr_results=ocr_results)
+    results.vis(save_dir="outputs", save_name="vis")

@@ -1,13 +1,14 @@
 # -*- encoding: utf-8 -*-
 # @Author: deeperrrr
 # @Contact: 3545615231@qq.com
-import cv2
-import numpy as np
 from pathlib import Path
 from typing import List
+
+import cv2
+import numpy as np
+from rapidocr import EngineType, RapidOCR
 from tqdm import tqdm
 
-from rapidocr import EngineType, RapidOCR
 from rapid_table import ModelType, RapidTable, RapidTableInput
 
 ocr_engine = RapidOCR(
@@ -32,7 +33,7 @@ def load_images_original_size(img_dir: str) -> List[np.ndarray]:
         raise FileNotFoundError(f"目录不存在: {img_dir}")
 
     image_paths = []
-    for ext in ['*.jpg', '*.jpeg', '*.png']:
+    for ext in ["*.jpg", "*.jpeg", "*.png"]:
         image_paths.extend(list(img_dir.glob(ext)))
 
     images = []
@@ -42,12 +43,18 @@ def load_images_original_size(img_dir: str) -> List[np.ndarray]:
     return images
 
 
-def dynamic_batch_process(table_engine: RapidTable, images: List[np.ndarray], ocr_results: List[List],
-                          batch_size: int = 1):
+def dynamic_batch_process(
+    table_engine: RapidTable,
+    images: List[np.ndarray],
+    ocr_results: List[List],
+    batch_size: int = 1,
+):
     all_results = []
-    for i in tqdm(range(0, len(images), batch_size), desc=f"表格批量推理, batch_size={batch_size}"):
-        batch_imgs = images[i:i + batch_size]
-        batch_ocrs = ocr_results[i:i + batch_size]
+    for i in tqdm(
+        range(0, len(images), batch_size), desc=f"表格批量推理, batch_size={batch_size}"
+    ):
+        batch_imgs = images[i : i + batch_size]
+        batch_ocrs = ocr_results[i : i + batch_size]
         results = table_engine(batch_imgs, batch_ocrs, batch_size)
         all_results.extend(results)
     return all_results
@@ -60,7 +67,9 @@ for img in tqdm(images, desc="OCR处理"):
     ocr_results.append(ocr_result)
 
 # 批量表格结构识别
-results = dynamic_batch_process(table_engine, images, ocr_results, batch_size)  # batch_size默认4
+results = dynamic_batch_process(
+    table_engine, images, ocr_results, batch_size
+)  # batch_size默认4
 
 for i, result in enumerate(results):
     result.vis(save_dir="outputs", save_name=f"vis_{i}")

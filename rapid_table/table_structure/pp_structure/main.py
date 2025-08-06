@@ -21,7 +21,7 @@ from rapid_table.utils.typings import EngineType, ModelType
 from ...inference_engine.base import get_engine
 from ..utils import get_struct_str
 from .post_process import TableLabelDecode
-from .pre_process import TablePreprocess, BatchTablePreprocess
+from .pre_process import TablePreprocess
 
 
 class PPTableStructurer:
@@ -37,11 +37,13 @@ class PPTableStructurer:
         self.character = self.session.get_character_list()
         self.postprocess_op = TableLabelDecode(self.character)
 
-    def __call__(self, ori_img: np.ndarray, batch_size: int = 4) -> Tuple[List[str], np.ndarray, float]:
-        if batch_size > 1:
-            return self.batch_process(ori_img)
-
+    def __call__(
+        self, ori_img: np.ndarray, batch_size: int = 1
+    ) -> Tuple[List[str], np.ndarray, float]:
         s = time.perf_counter()
+
+        if batch_size > 1:
+            return self.batch_process([ori_img])
 
         img, shape_list = self.preprocess_op(ori_img)
 
@@ -59,7 +61,9 @@ class PPTableStructurer:
         elapse = time.perf_counter() - s
         return table_struct_str, cell_bboxes, elapse
 
-    def batch_process(self, img_list: List[np.ndarray]) -> List[Tuple[List[str], np.ndarray, float]]:
+    def batch_process(
+        self, img_list: List[np.ndarray]
+    ) -> List[Tuple[List[str], np.ndarray, float]]:
         """批量处理图像列表
         Args:
             img_list: 图像列表
@@ -81,11 +85,13 @@ class PPTableStructurer:
         results = []
 
         for i in range(batch_size):
-            single_bbox_preds = bbox_preds[i:i + 1]
-            single_struct_probs = struct_probs[i:i + 1]
+            single_bbox_preds = bbox_preds[i : i + 1]
+            single_struct_probs = struct_probs[i : i + 1]
             single_shape_list = np.array([shape_lists[i]])
 
-            post_result = self.postprocess_op(single_bbox_preds, single_struct_probs, [single_shape_list])
+            post_result = self.postprocess_op(
+                single_bbox_preds, single_struct_probs, [single_shape_list]
+            )
 
             table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
             cell_bboxes = post_result["bbox_batch_list"][0]
@@ -104,7 +110,7 @@ class PPTableStructurer:
         return results
 
     def rescale_cell_bboxes(
-            self, img: np.ndarray, cell_bboxes: np.ndarray
+        self, img: np.ndarray, cell_bboxes: np.ndarray
     ) -> np.ndarray:
         h, w = img.shape[:2]
         resized = 488
