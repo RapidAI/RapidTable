@@ -12,6 +12,7 @@ import numpy as np
 from .model_processor.main import ModelProcessor
 from .table_matcher import TableMatch
 from .utils import (
+    InputType,
     LoadImage,
     Logger,
     ModelType,
@@ -24,8 +25,6 @@ from .utils import (
 
 logger = Logger(logger_name=__name__).get_log()
 root_dir = Path(__file__).resolve().parent
-
-InputType = Union[str, np.ndarray, bytes, Path]
 
 
 class RapidTable:
@@ -72,16 +71,9 @@ class RapidTable:
         ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
         batch_size: int = 1,
     ) -> RapidTableOutput:
-        img_content = (
-            [img_content] if isinstance(img_content, InputType) else img_content
-        )
-
-        if batch_size > 1:
-            return self._batch_process(img_content, ocr_results)
-
         s = time.perf_counter()
 
-        img = self.load_img(img_content)
+        imgs = self._load_img(img_content)
 
         dt_boxes, rec_res = self.get_ocr_results(img, ocr_results)
         pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(img)
@@ -93,13 +85,20 @@ class RapidTable:
         elapse = time.perf_counter() - s
         return RapidTableOutput(img, pred_html, cell_bboxes, logic_points, elapse)
 
+    def _load_img(
+        self, img_content: Union[List[InputType], InputType]
+    ) -> List[np.ndarray]:
+        img_contents = (
+            [img_content] if isinstance(img_content, InputType) else img_content
+        )
+        return [self.load_img(img) for img in img_contents]
+
     def _batch_process(
         self,
         img_contents: List[Union[str, np.ndarray, bytes, Path]],
         ocr_results: Optional[List] = None,
         batch_size: int = 4,
     ) -> List[RapidTableOutput]:
-        """批量处理图像"""
         s = time.perf_counter()
 
         images = []
@@ -111,7 +110,8 @@ class RapidTable:
         batch_rec_res = []
 
         for i, img in enumerate(images):
-            dt_boxes, rec_res = get_boxes_recs(ocr_results[i], img.shape[:2])
+            img_h, img_w = img.shape[:2]
+            dt_boxes, rec_res = get_boxes_recs(ocr_results[i], img_h, img_w)
             batch_dt_boxes.append(dt_boxes)
             batch_rec_res.append(rec_res)
 
@@ -139,7 +139,8 @@ class RapidTable:
         self, img: np.ndarray, ocr_results: Tuple[np.ndarray, Tuple[str], Tuple[float]]
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
         if ocr_results is not None:
-            return get_boxes_recs(ocr_results, img.shape[:2])
+            img_h, img_w = img.shape[:2]
+            return get_boxes_recs(ocr_results, img_h, img_w)
 
         if not self.cfg.use_ocr:
             return None, None

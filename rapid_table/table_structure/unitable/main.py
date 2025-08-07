@@ -98,8 +98,8 @@ class UniTableStructure:
         bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, ori_h - 1)
         return bboxes
 
-    def preprocess_img(self, image: np.ndarray) -> torch.Tensor:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    def preprocess_img(self, ori_image: np.ndarray) -> torch.Tensor:
+        image = cv2.cvtColor(ori_image, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(image)
         image = self.transform(image).unsqueeze(0).to(self.device)
         return image
