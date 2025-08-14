@@ -29,6 +29,15 @@ class TableLabelDecode:
         batch: Optional[List[np.ndarray]],
     ):
         shape_list = batch[-1]
+        result = self.decode(structure_probs[0], bbox_preds[0], shape_list)
+        if len(batch) == 1:
+            # only contains shape
+            return result
+
+        label_decode_result = self.decode_label(batch)
+        return result, label_decode_result
+
+    def decode_single(self, structure_probs, bbox_preds, shape_list):
         result = self.decode(structure_probs, bbox_preds, shape_list)
         if len(batch) == 1:
             # only contains shape

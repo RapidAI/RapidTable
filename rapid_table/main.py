@@ -18,7 +18,7 @@ from .utils import (
     ModelType,
     RapidTableInput,
     RapidTableOutput,
-    get_boxes_recs,
+    format_ocr_results,
     import_package,
     is_url,
 )
@@ -73,10 +73,10 @@ class RapidTable:
     ) -> RapidTableOutput:
         s = time.perf_counter()
 
-        imgs = self._load_img(img_content)
+        imgs = self._load_imgs(img_content)
 
-        dt_boxes, rec_res = self.get_ocr_results(img, ocr_results)
-        pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(img)
+        dt_boxes, rec_res = self.get_ocr_results(imgs, ocr_results)
+        pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(imgs)
 
         pred_html = self.get_table_matcher(
             pred_structures, cell_bboxes, dt_boxes, rec_res
@@ -85,7 +85,7 @@ class RapidTable:
         elapse = time.perf_counter() - s
         return RapidTableOutput(img, pred_html, cell_bboxes, logic_points, elapse)
 
-    def _load_img(
+    def _load_imgs(
         self, img_content: Union[List[InputType], InputType]
     ) -> List[np.ndarray]:
         img_contents = (
@@ -111,7 +111,7 @@ class RapidTable:
 
         for i, img in enumerate(images):
             img_h, img_w = img.shape[:2]
-            dt_boxes, rec_res = get_boxes_recs(ocr_results[i], img_h, img_w)
+            dt_boxes, rec_res = format_ocr_results(ocr_results[i], img_h, img_w)
             batch_dt_boxes.append(dt_boxes)
             batch_rec_res.append(rec_res)
 
@@ -136,25 +136,40 @@ class RapidTable:
         return output_results
 
     def get_ocr_results(
-        self, img: np.ndarray, ocr_results: Tuple[np.ndarray, Tuple[str], Tuple[float]]
-    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-        if ocr_results is not None:
-            img_h, img_w = img.shape[:2]
-            return get_boxes_recs(ocr_results, img_h, img_w)
-
+        self,
+        imgs: List[np.ndarray],
+        ocr_results: Optional[List[Tuple[np.ndarray, Tuple[str], Tuple[float]]]] = None,
+    ) -> Any:
         if not self.cfg.use_ocr:
             return None, None
 
-        ori_ocr_res = self.ocr_engine(img)
-        if ori_ocr_res.boxes is None:
-            logger.warning("OCR Result is empty")
-            return None, None
+        batch_dt_boxes, batch_rec_res = [], []
 
-        ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-        return get_boxes_recs(ocr_results, img.shape[:2])
+        if ocr_results is not None:
+            for img, ocr_result in zip(imgs, ocr_results):
+                img_h, img_w = img.shape[:2]
+                dt_boxes, rec_res = format_ocr_results(ocr_result, img_h, img_w)
+                batch_dt_boxes.append(dt_boxes)
+                batch_rec_res.append(rec_res)
+            return batch_dt_boxes, batch_rec_res
 
-    def get_table_rec_results(self, img: np.ndarray):
-        pred_structures, cell_bboxes, _ = self.table_structure(img)
+        for img in imgs:
+            ori_ocr_res = self.ocr_engine(img)
+            if ori_ocr_res.boxes is None:
+                logger.warning("OCR Result is empty")
+                batch_dt_boxes.append(None)
+                batch_rec_res.append(None)
+
+            img_h, img_w = img.shape[:2]
+            ocr_result = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
+            dt_boxes, rec_res = format_ocr_results(ocr_result, img_h, img_w)
+            batch_dt_boxes.append(dt_boxes)
+            batch_rec_res.append(rec_res)
+
+        return batch_dt_boxes, batch_rec_res
+
+    def get_table_rec_results(self, imgs: List[np.ndarray]):
+        pred_structures, cell_bboxes, _ = self.table_structure(imgs)
         logic_points = self.table_matcher.decode_logic_points(pred_structures)
         return pred_structures, cell_bboxes, logic_points
 

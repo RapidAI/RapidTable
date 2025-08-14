@@ -28,34 +28,31 @@ class PPTableStructurer:
     def __init__(self, cfg: Dict[str, Any]):
         if cfg["engine_type"] is None:
             cfg["engine_type"] = EngineType.ONNXRUNTIME
+
         self.session = get_engine(cfg["engine_type"])(cfg)
         self.cfg = cfg
 
         self.preprocess_op = TablePreprocess()
-        self.batch_preprocess_op = BatchTablePreprocess()
 
-        self.character = self.session.get_character_list()
-        self.postprocess_op = TableLabelDecode(self.character)
+        character = self.session.get_character_list()
+        self.postprocess_op = TableLabelDecode(character)
 
     def __call__(
-        self, ori_img: np.ndarray, batch_size: int = 1
+        self, ori_imgs: List[np.ndarray]
     ) -> Tuple[List[str], np.ndarray, float]:
         s = time.perf_counter()
 
-        if batch_size > 1:
-            return self.batch_process([ori_img])
+        imgs, shape_lists = self.preprocess_op(ori_imgs)
 
-        img, shape_list = self.preprocess_op(ori_img)
+        bbox_preds, struct_probs = self.session(imgs.copy())
 
-        bbox_preds, struct_probs = self.session(img.copy())
-
-        post_result = self.postprocess_op(bbox_preds, struct_probs, [shape_list])
+        post_result = self.postprocess_op(bbox_preds, struct_probs, shape_lists)
 
         table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
         cell_bboxes = post_result["bbox_batch_list"][0]
 
         if self.cfg["model_type"] == ModelType.SLANETPLUS:
-            cell_bboxes = self.rescale_cell_bboxes(ori_img, cell_bboxes)
+            cell_bboxes = self.rescale_cell_bboxes(ori_imgs, cell_bboxes)
         cell_bboxes = self.filter_blank_bbox(cell_bboxes)
 
         elapse = time.perf_counter() - s

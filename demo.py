@@ -23,9 +23,10 @@ table_engine = RapidTable(input_args)
 # ocr_results = list(zip(*ocr_results))
 
 img_list = list(Path("images").iterdir())
+ocr_results = []
 for img_path in img_list:
     ori_ocr_res = ocr_engine(img_path)
-    ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
+    ocr_results.append([ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores])
 
-    results = table_engine(img_path, ocr_results=ocr_results)
-    results.vis(save_dir="outputs", save_name="vis")
+results = table_engine(img_list, ocr_results=ocr_results)
+results.vis(save_dir="outputs", save_name="vis")
