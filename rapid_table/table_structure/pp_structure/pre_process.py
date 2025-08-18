@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import cv2
 import numpy as np
@@ -17,12 +17,9 @@ class TablePreprocess:
 
     def __call__(
         self, img_list: List[np.ndarray]
-    ) -> Tuple[Optional[List[np.ndarray]], Optional[List[List[float]]]]:
+    ) -> Tuple[List[np.ndarray], np.ndarray]:
         if isinstance(img_list, np.ndarray):
             img_list = [img_list]
-
-        if len(img_list) <= 0:
-            return None, None
 
         processed_imgs, shape_lists = [], []
         for img in img_list:
@@ -37,7 +34,7 @@ class TablePreprocess:
             processed_imgs.append(img_processed)
             shape_lists.append(shape_list)
 
-        return processed_imgs, shape_lists
+        return processed_imgs, np.array(shape_lists)
 
     def resize_image(self, img: np.ndarray) -> Tuple[np.ndarray, List[float]]:
         h, w = img.shape[:2]

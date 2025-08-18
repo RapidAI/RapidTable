@@ -47,10 +47,11 @@ class PPTableStructurer:
         bbox_preds, struct_probs = self.session(imgs.copy())
 
         post_result = self.postprocess_op(bbox_preds, struct_probs, shape_lists)
+        # post_results = self.batch_postprocess(bbox_preds, struct_probs, shape_lists)
 
         table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
-        cell_bboxes = post_result["bbox_batch_list"][0]
 
+        cell_bboxes = post_result["bbox_batch_list"][0]
         if self.cfg["model_type"] == ModelType.SLANETPLUS:
             cell_bboxes = self.rescale_cell_bboxes(ori_imgs, cell_bboxes)
         cell_bboxes = self.filter_blank_bbox(cell_bboxes)

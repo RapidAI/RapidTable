@@ -1,7 +1,6 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
-from typing import List, Optional
 
 import numpy as np
 
@@ -26,24 +25,14 @@ class TableLabelDecode:
         self,
         bbox_preds: np.ndarray,
         structure_probs: np.ndarray,
-        batch: Optional[List[np.ndarray]],
+        shape_list: np.ndarray,
     ):
-        shape_list = batch[-1]
-        result = self.decode(structure_probs[0], bbox_preds[0], shape_list)
-        if len(batch) == 1:
-            # only contains shape
-            return result
-
-        label_decode_result = self.decode_label(batch)
-        return result, label_decode_result
-
-    def decode_single(self, structure_probs, bbox_preds, shape_list):
         result = self.decode(structure_probs, bbox_preds, shape_list)
-        if len(batch) == 1:
+        if len(shape_list) == 1:
             # only contains shape
             return result
 
-        label_decode_result = self.decode_label(batch)
+        label_decode_result = self.decode_label(shape_list)
         return result, label_decode_result
 
     def decode(self, structure_probs, bbox_preds, shape_list):
