@@ -11,7 +11,7 @@ from torchvision import transforms
 
 from ...inference_engine.base import get_engine
 from ...utils import EngineType
-from ..utils import get_struct_str
+from ..utils import wrap_with_html_struct
 from .consts import (
     BBOX_TOKENS,
     EOS_TOKEN,
@@ -85,7 +85,7 @@ class UniTableStructure:
         context = self.loop_decode(self.context, self.eos_id_tensor, memory)
         bboxes, html_tokens = self.decode_tokens(context)
         bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
-        structure_list = get_struct_str(html_tokens)
+        structure_list = wrap_with_html_struct(html_tokens)
         elapse = time.perf_counter() - start_time
         return structure_list, bboxes, elapse
 

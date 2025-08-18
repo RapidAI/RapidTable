@@ -97,7 +97,7 @@ class RapidTable:
         self,
         img_contents: List[Union[str, np.ndarray, bytes, Path]],
         ocr_results: Optional[List] = None,
-        batch_size: int = 4,
+        batch_size: int = 1,
     ) -> List[RapidTableOutput]:
         s = time.perf_counter()
 

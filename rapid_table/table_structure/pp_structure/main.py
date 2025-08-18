@@ -16,10 +16,9 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
-from rapid_table.utils.typings import EngineType, ModelType
-
 from ...inference_engine.base import get_engine
-from ..utils import get_struct_str
+from ...utils.typings import EngineType, ModelType
+from ..utils import wrap_with_html_struct
 from .post_process import TableLabelDecode
 from .pre_process import TablePreprocess
 
@@ -46,10 +45,14 @@ class PPTableStructurer:
 
         bbox_preds, struct_probs = self.session(imgs.copy())
 
-        post_result = self.postprocess_op(bbox_preds, struct_probs, shape_lists)
+        post_result = self.postprocess_op(
+            bbox_preds, struct_probs, shape_lists, ori_imgs
+        )
         # post_results = self.batch_postprocess(bbox_preds, struct_probs, shape_lists)
 
-        table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
+        table_struct_str = wrap_with_html_struct(
+            post_result["structure_batch_list"][0][0]
+        )
 
         cell_bboxes = post_result["bbox_batch_list"][0]
         if self.cfg["model_type"] == ModelType.SLANETPLUS:
@@ -91,7 +94,9 @@ class PPTableStructurer:
                 single_bbox_preds, single_struct_probs, [single_shape_list]
             )
 
-            table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
+            table_struct_str = wrap_with_html_struct(
+                post_result["structure_batch_list"][0][0]
+            )
             cell_bboxes = post_result["bbox_batch_list"][0]
 
             if self.cfg["model_type"] == ModelType.SLANETPLUS:

@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
-
 import numpy as np
+
+from ...utils.typings import ModelType
+from ..utils import wrap_with_html_struct
 
 
 class TableLabelDecode:
@@ -26,16 +28,12 @@ class TableLabelDecode:
         bbox_preds: np.ndarray,
         structure_probs: np.ndarray,
         shape_list: np.ndarray,
+        ori_imgs: np.ndarray,
     ):
-        result = self.decode(structure_probs, bbox_preds, shape_list)
-        if len(shape_list) == 1:
-            # only contains shape
-            return result
+        result = self.decode(structure_probs, bbox_preds, shape_list, ori_imgs)
+        return result
 
-        label_decode_result = self.decode_label(shape_list)
-        return result, label_decode_result
-
-    def decode(self, structure_probs, bbox_preds, shape_list):
+    def decode(self, structure_probs, bbox_preds, shape_list, ori_imgs):
         """convert text-label into text-index."""
         ignored_tokens = self.get_ignored_tokens()
         end_idx = self.char_to_index[self.end_str]
@@ -43,8 +41,7 @@ class TableLabelDecode:
         structure_idx = structure_probs.argmax(axis=2)
         structure_probs = structure_probs.max(axis=2)
 
-        structure_batch_list = []
-        bbox_batch_list = []
+        table_structs, cell_bboxes = [], []
         batch_size = len(structure_idx)
         for batch_idx in range(batch_size):
             structure_list, bbox_list, score_list = [], [], []
@@ -64,50 +61,14 @@ class TableLabelDecode:
 
                 structure_list.append(text)
                 score_list.append(structure_probs[batch_idx, idx])
-            structure_batch_list.append([structure_list, np.mean(score_list)])
-            bbox_batch_list.append(np.array(bbox_list))
 
-        return {
-            "bbox_batch_list": bbox_batch_list,
-            "structure_batch_list": structure_batch_list,
-        }
+            bboxes = self.normalize_bboxes(bbox_list, ori_imgs)
+            cell_bboxes.append(bboxes)
 
-    def decode_label(self, batch):
-        """convert text-label into text-index."""
-        structure_idx = batch[1]
-        gt_bbox_list = batch[2]
-        shape_list = batch[-1]
-        ignored_tokens = self.get_ignored_tokens()
-        end_idx = self.char_to_index[self.end_str]
-
-        structure_batch_list = []
-        bbox_batch_list = []
-        batch_size = len(structure_idx)
-        for batch_idx in range(batch_size):
-            structure_list = []
-            bbox_list = []
-            for idx in range(len(structure_idx[batch_idx])):
-                char_idx = int(structure_idx[batch_idx][idx])
-                if idx > 0 and char_idx == end_idx:
-                    break
-
-                if char_idx in ignored_tokens:
-                    continue
-
-                structure_list.append(self.character[char_idx])
-
-                bbox = gt_bbox_list[batch_idx][idx]
-                if bbox.sum() != 0:
-                    bbox = self._bbox_decode(bbox, shape_list[batch_idx])
-                    bbox_list.append(bbox)
-
-            structure_batch_list.append(structure_list)
-            bbox_batch_list.append(bbox_list)
-        result = {
-            "bbox_batch_list": bbox_batch_list,
-            "structure_batch_list": structure_batch_list,
-        }
-        return result
+            table_structs.append(
+                [wrap_with_html_struct(structure_list), np.mean(score_list)]
+            )
+        return table_structs, cell_bboxes
 
     def _bbox_decode(self, bbox, shape):
         h, w = shape[:2]
@@ -134,3 +95,28 @@ class TableLabelDecode:
         self.end_str = "eos"
         dict_character = [self.beg_str] + dict_character + [self.end_str]
         return dict_character
+
+    def normalize_bboxes(self, bbox_list, ori_imgs):
+        cell_bboxes = np.array(bbox_list)
+        if self.cfg["model_type"] == ModelType.SLANETPLUS:
+            cell_bboxes = self.rescale_cell_bboxes(ori_imgs, cell_bboxes)
+        cell_bboxes = self.filter_blank_bbox(cell_bboxes)
+        return cell_bboxes
+
+    def rescale_cell_bboxes(
+        self, img: np.ndarray, cell_bboxes: np.ndarray
+    ) -> np.ndarray:
+        h, w = img.shape[:2]
+        resized = 488
+        ratio = min(resized / h, resized / w)
+        w_ratio = resized / (w * ratio)
+        h_ratio = resized / (h * ratio)
+        cell_bboxes[:, 0::2] *= w_ratio
+        cell_bboxes[:, 1::2] *= h_ratio
+        return cell_bboxes
+
+    @staticmethod
+    def filter_blank_bbox(cell_bboxes: np.ndarray) -> np.ndarray:
+        # 过滤掉占位的bbox
+        mask = ~np.all(cell_bboxes == 0, axis=1)
+        return cell_bboxes[mask]
