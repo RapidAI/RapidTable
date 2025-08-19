@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from tqdm import tqdm
 
 from .model_processor.main import ModelProcessor
 from .table_matcher import TableMatch
@@ -67,14 +68,32 @@ class RapidTable:
 
     def __call__(
         self,
-        img_content: Union[List[InputType], InputType],
+        img_contents: Union[List[InputType], InputType],
         ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
-        batch_size: int = 1,
+        batch_size: int = 2,
+    ) -> Any:
+        if img_contents is InputType:
+            img_contents = [img_contents]
+
+        results = []
+        total_nums = len(img_contents)
+        for start_i in tqdm(range(0, total_nums, batch_size)):
+            end_i = min(total_nums, start_i + batch_size)
+
+            batch_imgs = img_contents[start_i:end_i]
+            ocr_result = ocr_results[start_i:end_i]
+            result = self.process_batch(batch_imgs, ocr_result)
+
+            results.append(result)
+
+    def process_batch(
+        self,
+        img_contents: Union[List[InputType], InputType],
+        ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
     ) -> RapidTableOutput:
         s = time.perf_counter()
 
-        imgs = self._load_imgs(img_content)
-
+        imgs = self._load_imgs(img_contents)
         dt_boxes, rec_res = self.get_ocr_results(imgs, ocr_results)
         pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(imgs)
 
@@ -91,48 +110,6 @@ class RapidTable:
             [img_content] if isinstance(img_content, InputType) else img_content
         )
         return [self.load_img(img) for img in img_contents]
-
-    def _batch_process(
-        self,
-        img_contents: List[Union[str, np.ndarray, bytes, Path]],
-        ocr_results: Optional[List] = None,
-        batch_size: int = 1,
-    ) -> List[RapidTableOutput]:
-        s = time.perf_counter()
-
-        images = []
-        for img_content in img_contents:
-            img = self.load_img(img_content)
-            images.append(img)
-
-        batch_dt_boxes = []
-        batch_rec_res = []
-
-        for i, img in enumerate(images):
-            img_h, img_w = img.shape[:2]
-            dt_boxes, rec_res = format_ocr_results(ocr_results[i], img_h, img_w)
-            batch_dt_boxes.append(dt_boxes)
-            batch_rec_res.append(rec_res)
-
-        # 批量表格结构识别
-        batch_results = self.table_structure(images, batch_size)
-
-        output_results = []
-        for i, (img, (pred_structures, cell_bboxes, _)) in enumerate(
-            zip(images, batch_results)
-        ):
-            logic_points = self.table_matcher.decode_logic_points(pred_structures)
-            pred_html = self.get_table_matcher(
-                pred_structures, cell_bboxes, batch_dt_boxes[i], batch_rec_res[i]
-            )
-            result = RapidTableOutput(img, pred_html, cell_bboxes, logic_points, 0)
-            output_results.append(result)
-
-        total_elapse = time.perf_counter() - s
-        for result in output_results:
-            result.elapse = total_elapse / len(output_results)
-
-        return output_results
 
     def get_ocr_results(
         self,
