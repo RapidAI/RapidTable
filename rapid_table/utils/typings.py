@@ -4,7 +4,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 
@@ -38,10 +38,10 @@ class RapidTableInput:
 
 @dataclass
 class RapidTableOutput:
-    img: Optional[np.ndarray] = None
-    pred_html: Optional[str] = None
-    cell_bboxes: Optional[np.ndarray] = None
-    logic_points: Optional[np.ndarray] = None
+    imgs: Optional[List[np.ndarray]] = None
+    pred_htmls: Optional[List[str]] = None
+    cell_bboxes: Optional[List[np.ndarray]] = None
+    logic_points: Optional[List[np.ndarray]] = None
     elapse: Optional[float] = None
 
     def vis(
@@ -55,7 +55,7 @@ class RapidTableOutput:
         save_logic_points_path = Path(save_dir) / f"{save_name}_col_row_vis.jpg"
 
         vis_img = vis(
-            self.img,
+            self.imgs,
             self.pred_html,
             self.cell_bboxes,
             self.logic_points,

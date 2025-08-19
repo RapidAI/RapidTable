@@ -34,33 +34,22 @@ class PPTableStructurer:
         self.preprocess_op = TablePreprocess()
 
         character = self.session.get_character_list()
-        self.postprocess_op = TableLabelDecode(character)
+        self.postprocess_op = TableLabelDecode(character, cfg)
 
     def __call__(
         self, ori_imgs: List[np.ndarray]
-    ) -> Tuple[List[str], np.ndarray, float]:
+    ) -> Tuple[List[str], List[np.ndarray], float]:
         s = time.perf_counter()
 
         imgs, shape_lists = self.preprocess_op(ori_imgs)
 
         bbox_preds, struct_probs = self.session(imgs.copy())
 
-        post_result = self.postprocess_op(
+        table_structs, cell_bboxes = self.postprocess_op(
             bbox_preds, struct_probs, shape_lists, ori_imgs
         )
-        # post_results = self.batch_postprocess(bbox_preds, struct_probs, shape_lists)
-
-        table_struct_str = wrap_with_html_struct(
-            post_result["structure_batch_list"][0][0]
-        )
-
-        cell_bboxes = post_result["bbox_batch_list"][0]
-        if self.cfg["model_type"] == ModelType.SLANETPLUS:
-            cell_bboxes = self.rescale_cell_bboxes(ori_imgs, cell_bboxes)
-        cell_bboxes = self.filter_blank_bbox(cell_bboxes)
-
         elapse = time.perf_counter() - s
-        return table_struct_str, cell_bboxes, elapse
+        return table_structs, cell_bboxes, elapse
 
     def batch_process(
         self, img_list: List[np.ndarray]

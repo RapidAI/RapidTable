@@ -29,4 +29,5 @@ for img_path in img_list:
     ocr_results.append([ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores])
 
 results = table_engine(img_list, ocr_results=ocr_results)
-results.vis(save_dir="outputs", save_name="vis")
+# results.vis(save_dir="outputs", save_name="vis")
+print("ok")

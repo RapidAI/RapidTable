@@ -8,7 +8,7 @@ from ..utils import wrap_with_html_struct
 
 
 class TableLabelDecode:
-    def __init__(self, dict_character, merge_no_span_structure=True):
+    def __init__(self, dict_character, cfg, merge_no_span_structure=True):
         if merge_no_span_structure:
             if "<td></td>" not in dict_character:
                 dict_character.append("<td></td>")
@@ -22,6 +22,7 @@ class TableLabelDecode:
 
         self.character = dict_character
         self.td_token = ["<td>", "<td", "<td></td>"]
+        self.cfg = cfg
 
     def __call__(
         self,
@@ -62,7 +63,7 @@ class TableLabelDecode:
                 structure_list.append(text)
                 score_list.append(structure_probs[batch_idx, idx])
 
-            bboxes = self.normalize_bboxes(bbox_list, ori_imgs)
+            bboxes = self.normalize_bboxes(bbox_list, ori_imgs[batch_idx])
             cell_bboxes.append(bboxes)
 
             table_structs.append(
