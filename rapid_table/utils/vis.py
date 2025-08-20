@@ -1,7 +1,8 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
-from typing import Optional
+from pathlib import Path
+from typing import Union
 
 import cv2
 import numpy as np
@@ -20,9 +21,9 @@ class VisTable:
         pred_html: str,
         cell_bboxes: np.ndarray,
         logic_points: np.ndarray,
-        save_html_path: Optional[str] = None,
-        save_drawed_path: Optional[str] = None,
-        save_logic_path: Optional[str] = None,
+        save_html_path: Union[str, Path, None] = None,
+        save_drawed_path: Union[str, Path, None] = None,
+        save_logic_path: Union[str, Path, None] = None,
     ):
         if pred_html and save_html_path:
             html_with_border = self.insert_border_style(pred_html)
@@ -37,7 +38,7 @@ class VisTable:
             save_img(save_drawed_path, drawed_img)
             self.logger.info(f"Saved table struacter result to {save_drawed_path}")
 
-        if save_logic_path and logic_points:
+        if save_logic_path and logic_points.size > 0:
             self.plot_rec_box_with_logic_info(
                 img, save_logic_path, logic_points, cell_bboxes
             )

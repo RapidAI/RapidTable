@@ -70,38 +70,37 @@ class RapidTable:
         self,
         img_contents: Union[List[InputType], InputType],
         ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
-        batch_size: int = 2,
-    ) -> Any:
-        if img_contents is InputType:
+        batch_size: int = 3,
+    ) -> RapidTableOutput:
+        if not isinstance(img_contents, list):
             img_contents = [img_contents]
 
-        results = []
+        s = time.perf_counter()
+
+        results = RapidTableOutput()
         total_nums = len(img_contents)
         for start_i in tqdm(range(0, total_nums, batch_size)):
             end_i = min(total_nums, start_i + batch_size)
 
-            batch_imgs = img_contents[start_i:end_i]
-            ocr_result = ocr_results[start_i:end_i]
-            result = self.process_batch(batch_imgs, ocr_result)
+            imgs = self._load_imgs(img_contents[start_i:end_i])
 
-            results.append(result)
+            dt_boxes, rec_res = self.get_ocr_results(imgs, ocr_results[start_i:end_i])
 
-    def process_batch(
-        self,
-        img_contents: Union[List[InputType], InputType],
-        ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
-    ) -> RapidTableOutput:
-        s = time.perf_counter()
+            pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(
+                imgs
+            )
+            pred_htmls = self.get_table_matcher(
+                pred_structures, cell_bboxes, dt_boxes, rec_res
+            )
 
-        imgs = self._load_imgs(img_contents)
-        dt_boxes, rec_res = self.get_ocr_results(imgs, ocr_results)
-        pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(imgs)
+            results.imgs.extend(imgs)
+            results.pred_htmls.extend(pred_htmls)
+            results.cell_bboxes.extend(cell_bboxes)
+            results.logic_points.extend(logic_points)
 
-        pred_htmls = self.get_table_matcher(
-            pred_structures, cell_bboxes, dt_boxes, rec_res
-        )
         elapse = time.perf_counter() - s
-        return RapidTableOutput(imgs, pred_htmls, cell_bboxes, logic_points, elapse)
+        results.elapse = elapse / total_nums
+        return results
 
     def _load_imgs(
         self, img_content: Union[List[InputType], InputType]
@@ -131,6 +130,7 @@ class RapidTable:
 
         for img in imgs:
             ori_ocr_res = self.ocr_engine(img)
+
             if ori_ocr_res.boxes is None:
                 logger.warning("OCR Result is empty")
                 batch_dt_boxes.append(None)
@@ -151,7 +151,7 @@ class RapidTable:
 
     def get_table_matcher(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
         if dt_boxes is None and rec_res is None:
-            return None
+            return ""
 
         return self.table_matcher(pred_structures, cell_bboxes, dt_boxes, rec_res)
 

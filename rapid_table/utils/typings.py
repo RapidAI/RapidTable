@@ -4,7 +4,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -38,29 +38,37 @@ class RapidTableInput:
 
 @dataclass
 class RapidTableOutput:
-    imgs: Optional[List[np.ndarray]] = None
-    pred_htmls: Optional[List[str]] = None
-    cell_bboxes: Optional[List[np.ndarray]] = None
-    logic_points: Optional[List[np.ndarray]] = None
-    elapse: Optional[float] = None
+    imgs: List[np.ndarray] = field(default_factory=list)
+    pred_htmls: List[str] = field(default_factory=list)
+    cell_bboxes: List[np.ndarray] = field(default_factory=list)
+    logic_points: List[np.ndarray] = field(default_factory=list)
+    elapse: float = 0.0
 
     def vis(
-        self, save_dir: Union[str, Path, None] = None, save_name: Optional[str] = None
-    ) -> np.ndarray:
+        self, save_dir: Union[str, Path], save_name: str, indexes: Tuple[int] = (0,)
+    ) -> List[np.ndarray]:
         vis = VisTable()
 
+        save_dir = Path(save_dir)
         mkdir(save_dir)
-        save_html_path = Path(save_dir) / f"{save_name}.html"
-        save_drawed_path = Path(save_dir) / f"{save_name}_vis.jpg"
-        save_logic_points_path = Path(save_dir) / f"{save_name}_col_row_vis.jpg"
 
-        vis_img = vis(
-            self.imgs,
-            self.pred_html,
-            self.cell_bboxes,
-            self.logic_points,
-            save_html_path,
-            save_drawed_path,
-            save_logic_points_path,
-        )
-        return vis_img
+        results = []
+        for idx in indexes:
+            save_one_dir = save_dir / str(idx)
+            mkdir(save_one_dir)
+
+            save_html_path = save_one_dir / f"{save_name}.html"
+            save_drawed_path = save_one_dir / f"{save_name}_vis.jpg"
+            save_logic_points_path = save_one_dir / f"{save_name}_col_row_vis.jpg"
+
+            vis_img = vis(
+                self.imgs[idx],
+                self.pred_htmls[idx],
+                self.cell_bboxes[idx],
+                self.logic_points[idx],
+                save_html_path,
+                save_drawed_path,
+                save_logic_points_path,
+            )
+            results.append(vis_img)
+        return results
