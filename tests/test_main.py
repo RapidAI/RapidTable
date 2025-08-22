@@ -28,16 +28,16 @@ def test_only_table():
     table_engine = RapidTable(RapidTableInput(use_ocr=False))
     results = table_engine(img_path)
 
-    assert results.pred_html is None
-    assert results.cell_bboxes.shape == (16, 8)
+    assert len(results.pred_htmls) == 0
+    assert results.cell_bboxes[0].shape == (16, 8)
 
 
 def test_without_txt_table():
     img_path = test_file_dir / "table_without_txt.jpg"
     results = table_engine(img_path)
 
-    assert results.pred_html is None
-    assert results.cell_bboxes.shape == (16, 8)
+    assert len(results.pred_htmls) == 0
+    assert results.cell_bboxes[0].shape == (16, 8)
 
 
 @pytest.mark.parametrize(

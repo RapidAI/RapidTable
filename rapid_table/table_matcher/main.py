@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # -*- encoding: utf-8 -*-
+from typing import List, Optional, Tuple
+
 import numpy as np
 
 from .utils import compute_iou, distance
@@ -31,26 +33,40 @@ class TableMatch:
             results.append(one_result)
         return results
 
-    def process_one(self, pred_struct, cell_bbox, dt_box, rec_res):
-        if self.is_filter_ocr_res:
-            dt_box, rec_res = self.filter_ocr_result(cell_bbox, dt_box, rec_res)
+    def process_one(
+        self,
+        pred_struct: List[List[str]],
+        cell_bboxes: np.ndarray,
+        dt_boxes: Optional[np.ndarray] = None,
+        rec_res: Optional[List[Tuple[str, float]]] = None,
+    ):
+        if self.is_filter_ocr_res and dt_boxes is not None and rec_res is not None:
+            dt_boxes, rec_res = self.filter_ocr_result(cell_bboxes, dt_boxes, rec_res)
 
-        matched_index = self.match_result(dt_box, cell_bbox)
+        matched_index = self.match_result(cell_bboxes, dt_boxes)
         pred_html, pred = self.get_pred_html(pred_struct[0], matched_index, rec_res)
         return pred_html
 
-    def filter_ocr_result(self, cell_bboxes, dt_boxes, rec_res):
+    def filter_ocr_result(
+        self,
+        cell_bboxes: np.ndarray,
+        dt_boxes: np.ndarray,
+        rec_res: List[Tuple[str, float]],
+    ) -> Tuple[np.ndarray, List[Tuple[str, float]]]:
         y1 = cell_bboxes[:, 1::2].min()
-        new_dt_boxes = []
-        new_rec_res = []
+
+        new_dt_boxes, new_rec_res = [], []
         for box, rec in zip(dt_boxes, rec_res):
             if np.max(box[1::2]) < y1:
                 continue
+
             new_dt_boxes.append(box)
             new_rec_res.append(rec)
-        return new_dt_boxes, new_rec_res
+        return np.array(new_dt_boxes), new_rec_res
 
-    def match_result(self, dt_boxes, cell_bboxes, min_iou=0.1**8):
+    def match_result(
+        self, cell_bboxes: np.ndarray, dt_boxes: np.ndarray, min_iou: float = 0.1**8
+    ):
         matched = {}
         for i, gt_box in enumerate(dt_boxes):
             distances = []

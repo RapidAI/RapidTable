@@ -84,11 +84,10 @@ class RapidTable:
 
             imgs = self._load_imgs(img_contents[start_i:end_i])
 
-            dt_boxes, rec_res = self.get_ocr_results(imgs, ocr_results[start_i:end_i])
+            pred_structures, cell_bboxes, _ = self.table_structure(imgs)
+            logic_points = self.table_matcher.decode_logic_points(pred_structures)
 
-            pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(
-                imgs
-            )
+            dt_boxes, rec_res = self.get_ocr_results(imgs, start_i, end_i, ocr_results)
             pred_htmls = self.get_table_matcher(
                 pred_structures, cell_bboxes, dt_boxes, rec_res
             )
@@ -113,6 +112,8 @@ class RapidTable:
     def get_ocr_results(
         self,
         imgs: List[np.ndarray],
+        start_i: int,
+        end_i: int,
         ocr_results: Optional[List[Tuple[np.ndarray, Tuple[str], Tuple[float]]]] = None,
     ) -> Any:
         if not self.cfg.use_ocr:
@@ -121,7 +122,7 @@ class RapidTable:
         batch_dt_boxes, batch_rec_res = [], []
 
         if ocr_results is not None:
-            for img, ocr_result in zip(imgs, ocr_results):
+            for img, ocr_result in zip(imgs, ocr_results[start_i:end_i]):
                 img_h, img_w = img.shape[:2]
                 dt_boxes, rec_res = format_ocr_results(ocr_result, img_h, img_w)
                 batch_dt_boxes.append(dt_boxes)
@@ -135,6 +136,7 @@ class RapidTable:
                 logger.warning("OCR Result is empty")
                 batch_dt_boxes.append(None)
                 batch_rec_res.append(None)
+                continue
 
             img_h, img_w = img.shape[:2]
             ocr_result = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
@@ -143,11 +145,6 @@ class RapidTable:
             batch_rec_res.append(rec_res)
 
         return batch_dt_boxes, batch_rec_res
-
-    def get_table_rec_results(self, imgs: List[np.ndarray]):
-        pred_structures, cell_bboxes, _ = self.table_structure(imgs)
-        logic_points = self.table_matcher.decode_logic_points(pred_structures)
-        return pred_structures, cell_bboxes, logic_points
 
     def get_table_matcher(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
         if dt_boxes is None and rec_res is None:
