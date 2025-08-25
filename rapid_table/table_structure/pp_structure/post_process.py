@@ -1,6 +1,8 @@
 # -*- encoding: utf-8 -*-
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
+from typing import List, Tuple
+
 import numpy as np
 
 from ...utils.typings import ModelType
@@ -31,10 +33,16 @@ class TableLabelDecode:
         shape_list: np.ndarray,
         ori_imgs: np.ndarray,
     ):
-        result = self.decode(structure_probs, bbox_preds, shape_list, ori_imgs)
+        result = self.decode(bbox_preds, structure_probs, shape_list, ori_imgs)
         return result
 
-    def decode(self, structure_probs, bbox_preds, shape_list, ori_imgs):
+    def decode(
+        self,
+        bbox_preds: np.ndarray,
+        structure_probs: np.ndarray,
+        shape_list: np.ndarray,
+        ori_imgs: np.ndarray,
+    ) -> Tuple[List[Tuple[List[str], float]], List[np.ndarray]]:
         """convert text-label into text-index."""
         ignored_tokens = self.get_ignored_tokens()
         end_idx = self.char_to_index[self.end_str]
@@ -67,7 +75,7 @@ class TableLabelDecode:
             cell_bboxes.append(bboxes)
 
             table_structs.append(
-                [wrap_with_html_struct(structure_list), np.mean(score_list)]
+                (wrap_with_html_struct(structure_list), float(np.mean(score_list)))
             )
         return table_structs, cell_bboxes
 

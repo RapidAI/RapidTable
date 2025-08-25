@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # -*- encoding: utf-8 -*-
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -20,15 +20,23 @@ from .utils import compute_iou, distance
 
 
 class TableMatch:
-    def __init__(self, is_filter_ocr_res=True, use_master=False):
-        self.is_filter_ocr_res = is_filter_ocr_res
-        self.use_master = use_master
+    def __init__(self):
+        pass
 
-    def __call__(self, pred_structures, cell_bboxes, dt_boxes, rec_reses):
+    def __call__(
+        self,
+        pred_structures: List[List[List[str]]],
+        cell_bboxes: List[np.ndarray],
+        dt_boxes: List[np.ndarray],
+        rec_reses: List[List[Tuple[str, float]]],
+    ) -> List[Optional[str]]:
         results = []
-        for pred_struct, cell_bbox, dt_box, rec_res in zip(
-            pred_structures, cell_bboxes, dt_boxes, rec_reses
-        ):
+        for item in zip(pred_structures, cell_bboxes, dt_boxes, rec_reses):
+            pred_struct, cell_bbox, dt_box, rec_res = item
+            if dt_box is None or rec_res is None:
+                results.append(None)
+                continue
+
             one_result = self.process_one(pred_struct, cell_bbox, dt_box, rec_res)
             results.append(one_result)
         return results
@@ -37,12 +45,10 @@ class TableMatch:
         self,
         pred_struct: List[List[str]],
         cell_bboxes: np.ndarray,
-        dt_boxes: Optional[np.ndarray] = None,
-        rec_res: Optional[List[Tuple[str, float]]] = None,
-    ):
-        if self.is_filter_ocr_res and dt_boxes is not None and rec_res is not None:
-            dt_boxes, rec_res = self.filter_ocr_result(cell_bboxes, dt_boxes, rec_res)
-
+        dt_boxes: np.ndarray,
+        rec_res: List[Tuple[str, float]],
+    ) -> str:
+        dt_boxes, rec_res = self.filter_ocr_result(cell_bboxes, dt_boxes, rec_res)
         matched_index = self.match_result(cell_bboxes, dt_boxes)
         pred_html, pred = self.get_pred_html(pred_struct[0], matched_index, rec_res)
         return pred_html
@@ -66,7 +72,7 @@ class TableMatch:
 
     def match_result(
         self, cell_bboxes: np.ndarray, dt_boxes: np.ndarray, min_iou: float = 0.1**8
-    ):
+    ) -> Dict[int, List[int]]:
         matched = {}
         for i, gt_box in enumerate(dt_boxes):
             distances = []
@@ -96,7 +102,12 @@ class TableMatch:
                 matched[distances.index(sorted_distances[0])].append(i)
         return matched
 
-    def get_pred_html(self, pred_structures, matched_index, ocr_contents):
+    def get_pred_html(
+        self,
+        pred_structures: List[str],
+        matched_index: Dict[int, List[int]],
+        ocr_contents: List[Tuple[str, float]],
+    ):
         end_html = []
         td_index = 0
         for tag in pred_structures:
@@ -153,7 +164,7 @@ class TableMatch:
         end_html = [v for v in end_html if v not in filter_elements]
         return "".join(end_html), end_html
 
-    def decode_logic_points(self, pred_structures):
+    def decode_logic_points(self, pred_structures: List[List[List[str]]]):
         results = []
         for pred_struct in pred_structures:
             decode_result = self.decode_one_logic_points(pred_struct[0])

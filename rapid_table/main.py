@@ -78,6 +78,7 @@ class RapidTable:
         s = time.perf_counter()
 
         results = RapidTableOutput()
+
         total_nums = len(img_contents)
         for start_i in tqdm(range(0, total_nums, batch_size)):
             end_i = min(total_nums, start_i + batch_size)
@@ -87,8 +88,15 @@ class RapidTable:
             pred_structures, cell_bboxes, _ = self.table_structure(imgs)
             logic_points = self.table_matcher.decode_logic_points(pred_structures)
 
+            if not self.cfg.use_ocr:
+                results.imgs.extend(imgs)
+                results.cell_bboxes.extend(cell_bboxes)
+                results.logic_points.extend(logic_points)
+                continue
+
             dt_boxes, rec_res = self.get_ocr_results(imgs, start_i, end_i, ocr_results)
-            pred_htmls = self.get_table_matcher(
+
+            pred_htmls = self.table_matcher(
                 pred_structures, cell_bboxes, dt_boxes, rec_res
             )
 
@@ -116,9 +124,6 @@ class RapidTable:
         end_i: int,
         ocr_results: Optional[List[Tuple[np.ndarray, Tuple[str], Tuple[float]]]] = None,
     ) -> Any:
-        if not self.cfg.use_ocr:
-            return None, None
-
         batch_dt_boxes, batch_rec_res = [], []
 
         if ocr_results is not None:
@@ -145,12 +150,6 @@ class RapidTable:
             batch_rec_res.append(rec_res)
 
         return batch_dt_boxes, batch_rec_res
-
-    def get_table_matcher(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
-        if dt_boxes is None and rec_res is None:
-            return ""
-
-        return self.table_matcher(pred_structures, cell_bboxes, dt_boxes, rec_res)
 
 
 def parse_args(arg_list: Optional[List[str]] = None):
