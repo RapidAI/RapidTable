@@ -45,7 +45,10 @@ class RapidTableOutput:
     elapse: float = 0.0
 
     def vis(
-        self, save_dir: Union[str, Path], save_name: str, indexes: Tuple[int] = (0,)
+        self,
+        save_dir: Union[str, Path],
+        save_name: str,
+        indexes: Tuple[int, ...] = (0,),
     ) -> List[np.ndarray]:
         vis = VisTable()
 

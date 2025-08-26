@@ -80,7 +80,7 @@ class RapidTable:
         results = RapidTableOutput()
 
         total_nums = len(img_contents)
-        for start_i in tqdm(range(0, total_nums, batch_size)):
+        for start_i in tqdm(range(0, total_nums, batch_size), desc="BatchRec"):
             end_i = min(total_nums, start_i + batch_size)
 
             imgs = self._load_imgs(img_contents[start_i:end_i])
@@ -134,7 +134,10 @@ class RapidTable:
                 batch_rec_res.append(rec_res)
             return batch_dt_boxes, batch_rec_res
 
-        for img in imgs:
+        for img in tqdm(imgs, desc="OCR"):
+            if img is None:
+                continue
+
             ori_ocr_res = self.ocr_engine(img)
 
             if ori_ocr_res.boxes is None:

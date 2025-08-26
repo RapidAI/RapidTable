@@ -19,6 +19,7 @@ from .consts import (
     TASK_TOKENS,
     VALID_HTML_BBOX_TOKENS,
 )
+from .pre_process import TablePreprocess
 
 
 class UniTableStructure:
@@ -67,8 +68,44 @@ class UniTableStructure:
 
         self.decoder = self.model.decoder
 
+        self.preprocess_op = TablePreprocess(self.device)
+
+    def __call__(self, imgs: List[np.ndarray]):
+        start_time = time.perf_counter()
+
+        img_batch, ori_shapes = self.preprocess_op(imgs)
+        self.decoder.setup_caches(
+            max_batch_size=1,
+            max_seq_length=self.max_seq_len,
+            dtype=torch.float32,
+            device=self.device,
+        )
+        memory_batch = self.encoder(img_batch)
+
+        for i, memory in enumerate(memory_batch):
+            context = self.loop_decode(
+                self.context, self.eos_id_tensor, memory[None, ...]
+            )
+            bboxes, html_tokens = self.decode_tokens(context)
+
+            ori_h, ori_w = ori_shapes[i]
+            bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
+
+            structure_list = wrap_with_html_struct(html_tokens)
+
+        elapse = time.perf_counter() - start_time
+
+        # # print("ok")
+        # table_structs, bboxes, elapses = [], [], []
+        # for img in imgs:
+        #     table_struct, bbox, elapse = self.process_one(img)
+        #     table_structs.append(table_struct)
+        #     bboxes.append(bbox)
+        #     elapses.append(elapse)
+        # return table_structs, bboxes, elapses
+
     @torch.inference_mode()
-    def __call__(self, image: np.ndarray) -> Tuple[List[str], np.ndarray, float]:
+    def process_one(self, image: np.ndarray) -> Tuple[List[str], np.ndarray, float]:
         start_time = time.perf_counter()
 
         ori_h, ori_w = image.shape[:2]
@@ -82,10 +119,13 @@ class UniTableStructure:
         )
 
         memory = self.encoder(image)
+
         context = self.loop_decode(self.context, self.eos_id_tensor, memory)
         bboxes, html_tokens = self.decode_tokens(context)
         bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
+
         structure_list = wrap_with_html_struct(html_tokens)
+
         elapse = time.perf_counter() - start_time
         return structure_list, bboxes, elapse
 
@@ -103,6 +143,24 @@ class UniTableStructure:
         image = Image.fromarray(image)
         image = self.transform(image).unsqueeze(0).to(self.device)
         return image
+
+    def loop_decode(self, context, eos_id_tensor, memory):
+        box_token_count = 0
+        for _ in range(self.max_seq_len):
+            eos_flag = (context == eos_id_tensor).any(dim=1)
+            if torch.all(eos_flag):
+                break
+
+            next_tokens = self.decoder(memory, context)
+            if next_tokens[0] in self.bbox_token_ids:
+                box_token_count += 1
+                if box_token_count > 4:
+                    next_tokens = torch.tensor(
+                        [self.bbox_close_html_token], dtype=torch.int32
+                    )
+                    box_token_count = 0
+            context = torch.cat([context, next_tokens], dim=1)
+        return context
 
     def decode_tokens(self, context):
         pred_html = context[0]
@@ -153,21 +211,3 @@ class UniTableStructure:
 
         bbox_coords_array = np.array(bbox_coords).astype(np.float32)
         return bbox_coords_array, decoded_list
-
-    def loop_decode(self, context, eos_id_tensor, memory):
-        box_token_count = 0
-        for _ in range(self.max_seq_len):
-            eos_flag = (context == eos_id_tensor).any(dim=1)
-            if torch.all(eos_flag):
-                break
-
-            next_tokens = self.decoder(memory, context)
-            if next_tokens[0] in self.bbox_token_ids:
-                box_token_count += 1
-                if box_token_count > 4:
-                    next_tokens = torch.tensor(
-                        [self.bbox_close_html_token], dtype=torch.int32
-                    )
-                    box_token_count = 0
-            context = torch.cat([context, next_tokens], dim=1)
-        return context

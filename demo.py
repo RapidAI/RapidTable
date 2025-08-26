@@ -9,7 +9,7 @@ from rapid_table import ModelType, RapidTable, RapidTableInput
 
 ocr_engine = RapidOCR()
 
-input_args = RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH)
+input_args = RapidTableInput(model_type=ModelType.UNITABLE)
 table_engine = RapidTable(input_args)
 
 # img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
@@ -23,11 +23,6 @@ table_engine = RapidTable(input_args)
 # ocr_results = list(zip(*ocr_results))
 
 img_list = list(Path("images").iterdir())
-ocr_results = []
-for img_path in img_list:
-    ori_ocr_res = ocr_engine(img_path)
-    ocr_results.append([ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores])
-
-results = table_engine(img_list, ocr_results=ocr_results, batch_size=3)
+results = table_engine(img_list, batch_size=3)
 results.vis(save_dir="outputs", save_name="vis", indexes=(0, 1, 3))
 print("ok")
