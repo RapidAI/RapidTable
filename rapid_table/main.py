@@ -189,8 +189,8 @@ def main(arg_list: Optional[List[str]] = None):
 
     ori_ocr_res = table_engine.ocr_engine(img_path)
     ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-    table_results = table_engine(img_path, ocr_results=ocr_results)
-    print(table_results.pred_html)
+    table_results = table_engine(img_path, ocr_results=[ocr_results])
+    print(table_results.pred_htmls)
 
     if args.vis:
         save_dir = Path(".") if is_url(img_path) else Path(img_path).resolve().parent
