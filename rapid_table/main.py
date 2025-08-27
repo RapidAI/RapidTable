@@ -95,7 +95,6 @@ class RapidTable:
                 continue
 
             dt_boxes, rec_res = self.get_ocr_results(imgs, start_i, end_i, ocr_results)
-
             pred_htmls = self.table_matcher(
                 pred_structures, cell_bboxes, dt_boxes, rec_res
             )
@@ -139,7 +138,6 @@ class RapidTable:
                 continue
 
             ori_ocr_res = self.ocr_engine(img)
-
             if ori_ocr_res.boxes is None:
                 logger.warning("OCR Result is empty")
                 batch_dt_boxes.append(None)
@@ -147,6 +145,7 @@ class RapidTable:
                 continue
 
             img_h, img_w = img.shape[:2]
+
             ocr_result = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
             dt_boxes, rec_res = format_ocr_results(ocr_result, img_h, img_w)
             batch_dt_boxes.append(dt_boxes)
