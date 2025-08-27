@@ -743,6 +743,7 @@ class GPTFastDecoder(nn.Module):
         tgt = tgt[:, -1:]
         tgt_feature = self.pos_embed(self.token_embed(tgt), input_pos=input_pos)
         # tgt = self.decoder(tgt_feature, memory, input_pos)
+
         with torch.backends.cuda.sdp_kernel(
             enable_flash=False, enable_mem_efficient=False, enable_math=True
         ):

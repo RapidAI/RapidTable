@@ -71,38 +71,31 @@ class UniTableStructure:
         self.preprocess_op = TablePreprocess(self.device)
 
     def __call__(self, imgs: List[np.ndarray]):
-        start_time = time.perf_counter()
-
         img_batch, ori_shapes = self.preprocess_op(imgs)
-        self.decoder.setup_caches(
-            max_batch_size=1,
-            max_seq_length=self.max_seq_len,
-            dtype=torch.float32,
-            device=self.device,
-        )
         memory_batch = self.encoder(img_batch)
 
+        struct_list, total_bboxes, elapsees = [], [], []
         for i, memory in enumerate(memory_batch):
+            self.decoder.setup_caches(
+                max_batch_size=1,
+                max_seq_length=self.max_seq_len,
+                dtype=torch.float32,
+                device=self.device,
+            )
+
             context = self.loop_decode(
                 self.context, self.eos_id_tensor, memory[None, ...]
             )
             bboxes, html_tokens = self.decode_tokens(context)
 
             ori_h, ori_w = ori_shapes[i]
-            bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
+            one_bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
 
-            structure_list = wrap_with_html_struct(html_tokens)
+            one_struct = wrap_with_html_struct(html_tokens)
 
-        elapse = time.perf_counter() - start_time
-
-        # # print("ok")
-        # table_structs, bboxes, elapses = [], [], []
-        # for img in imgs:
-        #     table_struct, bbox, elapse = self.process_one(img)
-        #     table_structs.append(table_struct)
-        #     bboxes.append(bbox)
-        #     elapses.append(elapse)
-        # return table_structs, bboxes, elapses
+            struct_list.append((one_struct, 1.0))
+            total_bboxes.append(one_bboxes)
+        return struct_list, total_bboxes
 
     @torch.inference_mode()
     def process_one(self, image: np.ndarray) -> Tuple[List[str], np.ndarray, float]:

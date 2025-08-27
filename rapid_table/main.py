@@ -85,7 +85,7 @@ class RapidTable:
 
             imgs = self._load_imgs(img_contents[start_i:end_i])
 
-            pred_structures, cell_bboxes, _ = self.table_structure(imgs)
+            pred_structures, cell_bboxes = self.table_structure(imgs)
             logic_points = self.table_matcher.decode_logic_points(pred_structures)
 
             if not self.cfg.use_ocr:

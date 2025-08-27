@@ -38,9 +38,7 @@ class PPTableStructurer:
 
     def __call__(
         self, ori_imgs: List[np.ndarray]
-    ) -> Tuple[List[str], List[np.ndarray], float]:
-        s = time.perf_counter()
-
+    ) -> Tuple[List[str], List[np.ndarray]]:
         imgs, shape_lists = self.preprocess_op(ori_imgs)
 
         bbox_preds, struct_probs = self.session(imgs.copy())
@@ -48,8 +46,7 @@ class PPTableStructurer:
         table_structs, cell_bboxes = self.postprocess_op(
             bbox_preds, struct_probs, shape_lists, ori_imgs
         )
-        elapse = time.perf_counter() - s
-        return table_structs, cell_bboxes, elapse
+        return table_structs, cell_bboxes
 
     def batch_process(
         self, img_list: List[np.ndarray]

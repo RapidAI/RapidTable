@@ -10,6 +10,7 @@ from rapid_table import ModelType, RapidTable, RapidTableInput
 ocr_engine = RapidOCR()
 
 input_args = RapidTableInput(model_type=ModelType.UNITABLE)
+# input_args = RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH)
 table_engine = RapidTable(input_args)
 
 # img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
