@@ -2,6 +2,7 @@
 # @Author: SWHL
 # @Contact: liekkaskono@163.com
 IMG_SIZE = 448
+MAX_SEQ_LEN = 1024
 EOS_TOKEN = "<eos>"
 BBOX_TOKENS = [f"bbox-{i}" for i in range(IMG_SIZE + 1)]
 

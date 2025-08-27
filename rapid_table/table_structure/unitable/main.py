@@ -1,13 +1,9 @@
 # -*- encoding: utf-8 -*-
 import re
-import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
-import cv2
 import numpy as np
 import torch
-from PIL import Image
-from torchvision import transforms
 
 from ...inference_engine.base import get_engine
 from ...utils import EngineType
@@ -15,10 +11,11 @@ from ..utils import wrap_with_html_struct
 from .consts import (
     BBOX_TOKENS,
     EOS_TOKEN,
-    IMG_SIZE,
+    MAX_SEQ_LEN,
     TASK_TOKENS,
     VALID_HTML_BBOX_TOKENS,
 )
+from .post_process import rescale_bboxes
 from .pre_process import TablePreprocess
 
 
@@ -53,18 +50,7 @@ class UniTableStructure:
             self.device
         )
 
-        self.max_seq_len = 1024
-        self.img_size = IMG_SIZE
-        self.transform = transforms.Compose(
-            [
-                transforms.Resize((448, 448)),
-                transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=[0.86597056, 0.88463002, 0.87491087],
-                    std=[0.20686628, 0.18201602, 0.18485524],
-                ),
-            ]
-        )
+        self.max_seq_len = MAX_SEQ_LEN
 
         self.decoder = self.model.decoder
 
@@ -74,7 +60,7 @@ class UniTableStructure:
         img_batch, ori_shapes = self.preprocess_op(imgs)
         memory_batch = self.encoder(img_batch)
 
-        struct_list, total_bboxes, elapsees = [], [], []
+        struct_list, total_bboxes = [], []
         for i, memory in enumerate(memory_batch):
             self.decoder.setup_caches(
                 max_batch_size=1,
@@ -89,53 +75,12 @@ class UniTableStructure:
             bboxes, html_tokens = self.decode_tokens(context)
 
             ori_h, ori_w = ori_shapes[i]
-            one_bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
+            one_bboxes = rescale_bboxes(ori_h, ori_w, bboxes)
+            total_bboxes.append(one_bboxes)
 
             one_struct = wrap_with_html_struct(html_tokens)
-
             struct_list.append((one_struct, 1.0))
-            total_bboxes.append(one_bboxes)
         return struct_list, total_bboxes
-
-    @torch.inference_mode()
-    def process_one(self, image: np.ndarray) -> Tuple[List[str], np.ndarray, float]:
-        start_time = time.perf_counter()
-
-        ori_h, ori_w = image.shape[:2]
-        image = self.preprocess_img(image)
-
-        self.decoder.setup_caches(
-            max_batch_size=1,
-            max_seq_length=self.max_seq_len,
-            dtype=torch.float32,
-            device=self.device,
-        )
-
-        memory = self.encoder(image)
-
-        context = self.loop_decode(self.context, self.eos_id_tensor, memory)
-        bboxes, html_tokens = self.decode_tokens(context)
-        bboxes = self.rescale_bboxes(ori_h, ori_w, bboxes)
-
-        structure_list = wrap_with_html_struct(html_tokens)
-
-        elapse = time.perf_counter() - start_time
-        return structure_list, bboxes, elapse
-
-    def rescale_bboxes(self, ori_h, ori_w, bboxes):
-        scale_h = ori_h / self.img_size
-        scale_w = ori_w / self.img_size
-        bboxes[:, 0::2] *= scale_w  # 缩放 x 坐标
-        bboxes[:, 1::2] *= scale_h  # 缩放 y 坐标
-        bboxes[:, 0::2] = np.clip(bboxes[:, 0::2], 0, ori_w - 1)
-        bboxes[:, 1::2] = np.clip(bboxes[:, 1::2], 0, ori_h - 1)
-        return bboxes
-
-    def preprocess_img(self, ori_image: np.ndarray) -> torch.Tensor:
-        image = cv2.cvtColor(ori_image, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(image)
-        image = self.transform(image).unsqueeze(0).to(self.device)
-        return image
 
     def loop_decode(self, context, eos_id_tensor, memory):
         box_token_count = 0
