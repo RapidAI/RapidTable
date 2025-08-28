@@ -109,9 +109,9 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 |`rapid_table`|OCR|
 |:---:|:---|
-|v0.x|`rapidocr_onnxruntime`|
-|v1.0.x|`rapidocr>=2.0.0,<3.0.0`|
 |v2.x|`rapidocr>=3.0.0`|
+|v1.0.x|`rapidocr>=2.0.0,<3.0.0`|
+|v0.x|`rapidocr_onnxruntime`|
 
 由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径（`v1.0.x`  参数变量名使用`model_path`,  `v2.x` 参数变量名变更为`model_dir_or_path`）。注意仅限于我们现支持的`model_type`。
 
@@ -150,41 +150,21 @@ class ModelType(Enum):
 ##### CPU使用
 
 ```python
-
-from rapidocr import RapidOCR
-
 from rapid_table import ModelType, RapidTable, RapidTableInput
-
-ocr_engine = RapidOCR()
 
 input_args = RapidTableInput(model_type=ModelType.UNITABLE)
 table_engine = RapidTable(input_args)
 
 img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
-
-# # 使用单字识别
-# ori_ocr_res = ocr_engine(img_path, return_word_box=True)
-# ocr_results = [
-#     [word_result[0][2], word_result[0][0], word_result[0][1]]
-#     for word_result in ori_ocr_res.word_results
-# ]
-# ocr_results = list(zip(*ocr_results))
-
 ori_ocr_res = ocr_engine(img_path)
-ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-results = table_engine(img_path, ocr_results=ocr_results)
+results = table_engine(img_path)
 results.vis(save_dir="outputs", save_name="vis")
 ```
 
 ##### GPU使用
 
 ```python
-
-from rapidocr import RapidOCR
-
 from rapid_table import ModelType, RapidTable, RapidTableInput
-
-ocr_engine = RapidOCR()
 
 # onnxruntime-gpu
 input_args = RapidTableInput(
@@ -196,14 +176,11 @@ input_args = RapidTableInput(
 #     model_type=ModelType.UNITABLE,
 #     engine_cfg={"use_cuda": True, "cuda_ep_cfg.gpu_id": 1},
 # )
+
 table_engine = RapidTable(input_args)
 
 img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
-
-ori_ocr_res = ocr_engine(img_path)
-ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-
-results = table_engine(img_path, ocr_results=ocr_results)
+results = table_engine(img_path)
 results.vis(save_dir="outputs", save_name="vis")
 ```
 
