@@ -5,7 +5,7 @@ import argparse
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from tqdm import tqdm
@@ -109,7 +109,7 @@ class RapidTable:
         return results
 
     def _load_imgs(
-        self, img_content: Union[List[InputType], InputType]
+        self, img_content: Union[Sequence[InputType], InputType]
     ) -> List[np.ndarray]:
         img_contents = (
             [img_content] if isinstance(img_content, InputType) else img_content
@@ -183,12 +183,7 @@ def main(arg_list: Optional[List[str]] = None):
     input_args = RapidTableInput(model_type=ModelType(args.model_type))
     table_engine = RapidTable(input_args)
 
-    if table_engine.ocr_engine is None:
-        raise ValueError("ocr engine is None")
-
-    ori_ocr_res = table_engine.ocr_engine(img_path)
-    ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-    table_results = table_engine(img_path, ocr_results=[ocr_results])
+    table_results = table_engine(img_path)
     print(table_results.pred_htmls)
 
     if args.vis:
