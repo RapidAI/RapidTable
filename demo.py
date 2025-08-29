@@ -13,5 +13,5 @@ input_args = RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH)
 table_engine = RapidTable(input_args)
 
 img_list = list(Path("images").iterdir())
-results = table_engine(img_path, batch_size=3)
+results = table_engine(img_list, batch_size=3)
 results.vis(save_dir="outputs", save_name="vis", indexes=(0, 1, 2))

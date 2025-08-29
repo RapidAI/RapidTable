@@ -126,7 +126,14 @@ class RapidTable:
         batch_dt_boxes, batch_rec_res = [], []
 
         if ocr_results is not None:
-            for img, ocr_result in zip(imgs, ocr_results[start_i:end_i]):
+            ocr_results_batch = ocr_results[start_i:end_i]
+            if len(ocr_results_batch) != len(imgs):
+                raise ValueError(
+                    f"Batch size mismatch: {len(imgs)} images but {len(ocr_results_batch)} OCR results "
+                    f"(indices {start_i}:{end_i})."
+                )
+
+            for img, ocr_result in zip(imgs, ocr_results_batch):
                 img_h, img_w = img.shape[:2]
                 dt_boxes, rec_res = format_ocr_results(ocr_result, img_h, img_w)
                 batch_dt_boxes.append(dt_boxes)

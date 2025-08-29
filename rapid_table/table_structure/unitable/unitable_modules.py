@@ -748,7 +748,7 @@ class GPTFastDecoder(nn.Module):
                 logits = layer(logits, memory, input_pos=input_pos, tgt_mask=tgt_mask)
 
         logits = self.generator(logits)[:, -1, :]
-        total = set(list(range(logits.shape[-1])))
+        total = set(range(logits.shape[-1]))
         black_list = list(total.difference(set(self.token_white_list)))
         logits[..., black_list] = -1e9
         probs = F.softmax(logits, dim=-1)
