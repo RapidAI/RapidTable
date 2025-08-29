@@ -5,6 +5,7 @@ from typing import Optional
 import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
+from torch.nn.attention import SDPBackend, sdpa_kernel
 from torch.nn.modules.transformer import _get_activation_fn
 
 TOKEN_WHITE_LIST = [
@@ -654,9 +655,6 @@ class KVCache(nn.Module):
         )
 
     def update(self, input_pos, k_val, v_val):
-        # input_pos: [S], k_val: [B, H, S, D]
-        # assert input_pos.shape[0] == k_val.shape[2]
-
         bs = k_val.shape[0]
         k_out = self.k_cache
         v_out = self.v_cache
@@ -742,17 +740,15 @@ class GPTFastDecoder(nn.Module):
         input_pos = torch.tensor([tgt.shape[1] - 1], device=tgt.device, dtype=torch.int)
         tgt = tgt[:, -1:]
         tgt_feature = self.pos_embed(self.token_embed(tgt), input_pos=input_pos)
-        # tgt = self.decoder(tgt_feature, memory, input_pos)
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=False, enable_mem_efficient=False, enable_math=True
-        ):
+
+        with sdpa_kernel(SDPBackend.MATH):
             logits = tgt_feature
             tgt_mask = self.causal_mask[None, None, input_pos]
-            for i, layer in enumerate(self.layers):
+            for layer in self.layers:
                 logits = layer(logits, memory, input_pos=input_pos, tgt_mask=tgt_mask)
-        # return output
+
         logits = self.generator(logits)[:, -1, :]
-        total = set([i for i in range(logits.shape[-1])])
+        total = set(range(logits.shape[-1]))
         black_list = list(total.difference(set(self.token_white_list)))
         logits[..., black_list] = -1e9
         probs = F.softmax(logits, dim=-1)
@@ -878,6 +874,7 @@ class CrossAttention(nn.Module):
 
         if self.k_cache is None:
             self.k_cache = k
+
         if self.v_cache is None:
             self.v_cache = v
 

@@ -25,7 +25,6 @@ class LoadImage:
             raise LoadImageError(
                 f"The img type {type(img)} does not in {InputType.__args__}"
             )
-
         origin_img_type = type(img)
         img = self.load_img(img)
         img = self.convert_img(img, origin_img_type)

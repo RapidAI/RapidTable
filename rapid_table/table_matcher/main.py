@@ -12,25 +12,67 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # -*- encoding: utf-8 -*-
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 
 from .utils import compute_iou, distance
 
 
 class TableMatch:
-    def __init__(self, filter_ocr_result=True, use_master=False):
-        self.filter_ocr_result = filter_ocr_result
-        self.use_master = use_master
+    def __init__(self):
+        pass
 
-    def __call__(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
-        if self.filter_ocr_result:
-            dt_boxes, rec_res = self._filter_ocr_result(cell_bboxes, dt_boxes, rec_res)
+    def __call__(
+        self,
+        pred_structures: List[List[List[str]]],
+        cell_bboxes: List[np.ndarray],
+        dt_boxes: List[np.ndarray],
+        rec_reses: List[List[Tuple[str, float]]],
+    ) -> List[Optional[str]]:
+        results = []
+        for item in zip(pred_structures, cell_bboxes, dt_boxes, rec_reses):
+            pred_struct, cell_bbox, dt_box, rec_res = item
+            if dt_box is None or rec_res is None:
+                results.append(None)
+                continue
 
-        matched_index = self.match_result(dt_boxes, cell_bboxes)
-        pred_html, pred = self.get_pred_html(pred_structures, matched_index, rec_res)
+            one_result = self.process_one(pred_struct, cell_bbox, dt_box, rec_res)
+            results.append(one_result)
+        return results
+
+    def process_one(
+        self,
+        pred_struct: List[List[str]],
+        cell_bboxes: np.ndarray,
+        dt_boxes: np.ndarray,
+        rec_res: List[Tuple[str, float]],
+    ) -> str:
+        dt_boxes, rec_res = self.filter_ocr_result(cell_bboxes, dt_boxes, rec_res)
+        matched_index = self.match_result(cell_bboxes, dt_boxes)
+        pred_html, pred = self.get_pred_html(pred_struct[0], matched_index, rec_res)
         return pred_html
 
-    def match_result(self, dt_boxes, cell_bboxes, min_iou=0.1**8):
+    def filter_ocr_result(
+        self,
+        cell_bboxes: np.ndarray,
+        dt_boxes: np.ndarray,
+        rec_res: List[Tuple[str, float]],
+    ) -> Tuple[np.ndarray, List[Tuple[str, float]]]:
+        y1 = cell_bboxes[:, 1::2].min()
+
+        new_dt_boxes, new_rec_res = [], []
+        for box, rec in zip(dt_boxes, rec_res):
+            if np.max(box[1::2]) < y1:
+                continue
+
+            new_dt_boxes.append(box)
+            new_rec_res.append(rec)
+        return np.array(new_dt_boxes), new_rec_res
+
+    def match_result(
+        self, cell_bboxes: np.ndarray, dt_boxes: np.ndarray, min_iou: float = 0.1**8
+    ) -> Dict[int, List[int]]:
         matched = {}
         for i, gt_box in enumerate(dt_boxes):
             distances = []
@@ -60,7 +102,12 @@ class TableMatch:
                 matched[distances.index(sorted_distances[0])].append(i)
         return matched
 
-    def get_pred_html(self, pred_structures, matched_index, ocr_contents):
+    def get_pred_html(
+        self,
+        pred_structures: List[str],
+        matched_index: Dict[int, List[int]],
+        ocr_contents: List[Tuple[str, float]],
+    ):
         end_html = []
         td_index = 0
         for tag in pred_structures:
@@ -117,7 +164,14 @@ class TableMatch:
         end_html = [v for v in end_html if v not in filter_elements]
         return "".join(end_html), end_html
 
-    def decode_logic_points(self, pred_structures):
+    def decode_logic_points(self, pred_structures: List[List[List[str]]]):
+        results = []
+        for pred_struct in pred_structures:
+            decode_result = self.decode_one_logic_points(pred_struct[0])
+            results.append(np.array(decode_result))
+        return results
+
+    def decode_one_logic_points(self, pred_structures):
         logic_points = []
         current_row = 0
         current_col = 0
@@ -186,15 +240,3 @@ class TableMatch:
             i += 1
 
         return logic_points
-
-    def _filter_ocr_result(self, cell_bboxes, dt_boxes, rec_res):
-        y1 = cell_bboxes[:, 1::2].min()
-        new_dt_boxes = []
-        new_rec_res = []
-
-        for box, rec in zip(dt_boxes, rec_res):
-            if np.max(box[1::2]) < y1:
-                continue
-            new_dt_boxes.append(box)
-            new_rec_res.append(rec)
-        return new_dt_boxes, new_rec_res

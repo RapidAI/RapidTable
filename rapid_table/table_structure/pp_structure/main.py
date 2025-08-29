@@ -11,112 +11,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import time
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
-from rapid_table.utils.typings import EngineType, ModelType
-
 from ...inference_engine.base import get_engine
-from ..utils import get_struct_str
+from ...utils.typings import EngineType
 from .post_process import TableLabelDecode
-from .pre_process import TablePreprocess, BatchTablePreprocess
+from .pre_process import TablePreprocess
 
 
 class PPTableStructurer:
     def __init__(self, cfg: Dict[str, Any]):
         if cfg["engine_type"] is None:
             cfg["engine_type"] = EngineType.ONNXRUNTIME
+
         self.session = get_engine(cfg["engine_type"])(cfg)
         self.cfg = cfg
 
         self.preprocess_op = TablePreprocess()
-        self.batch_preprocess_op = BatchTablePreprocess()
 
-        self.character = self.session.get_character_list()
-        self.postprocess_op = TableLabelDecode(self.character)
+        character = self.session.get_character_list()
+        self.postprocess_op = TableLabelDecode(character, cfg)
 
-    def __call__(self, ori_img: np.ndarray, batch_size: int = 4) -> Tuple[List[str], np.ndarray, float]:
-        if batch_size > 1:
-            return self.batch_process(ori_img)
+    def __call__(
+        self, ori_imgs: List[np.ndarray]
+    ) -> Tuple[List[str], List[np.ndarray]]:
+        imgs, shape_lists = self.preprocess_op(ori_imgs)
 
-        s = time.perf_counter()
+        bbox_preds, struct_probs = self.session(imgs.copy())
 
-        img, shape_list = self.preprocess_op(ori_img)
-
-        bbox_preds, struct_probs = self.session(img.copy())
-
-        post_result = self.postprocess_op(bbox_preds, struct_probs, [shape_list])
-
-        table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
-        cell_bboxes = post_result["bbox_batch_list"][0]
-
-        if self.cfg["model_type"] == ModelType.SLANETPLUS:
-            cell_bboxes = self.rescale_cell_bboxes(ori_img, cell_bboxes)
-        cell_bboxes = self.filter_blank_bbox(cell_bboxes)
-
-        elapse = time.perf_counter() - s
-        return table_struct_str, cell_bboxes, elapse
-
-    def batch_process(self, img_list: List[np.ndarray]) -> List[Tuple[List[str], np.ndarray, float]]:
-        """批量处理图像列表
-        Args:
-            img_list: 图像列表
-
-        Returns:
-            结果列表，每个元素包含 (table_struct_str, cell_bboxes, elapse)
-        """
-        starttime = time.perf_counter()
-
-        batch_data = self.batch_preprocess_op(img_list)
-
-        preprocessed_images = batch_data[0]
-        shape_lists = batch_data[1]
-        preprocessed_images = np.array(preprocessed_images)
-
-        bbox_preds, struct_probs = self.session(preprocessed_images)
-
-        batch_size = preprocessed_images.shape[0]
-        results = []
-
-        for i in range(batch_size):
-            single_bbox_preds = bbox_preds[i:i + 1]
-            single_struct_probs = struct_probs[i:i + 1]
-            single_shape_list = np.array([shape_lists[i]])
-
-            post_result = self.postprocess_op(single_bbox_preds, single_struct_probs, [single_shape_list])
-
-            table_struct_str = get_struct_str(post_result["structure_batch_list"][0][0])
-            cell_bboxes = post_result["bbox_batch_list"][0]
-
-            if self.cfg["model_type"] == ModelType.SLANETPLUS:
-                cell_bboxes = self.rescale_cell_bboxes(img_list[i], cell_bboxes)
-
-            cell_bboxes = self.filter_blank_bbox(cell_bboxes)
-
-            results.append((table_struct_str, cell_bboxes, 0))
-
-        total_elapse = time.perf_counter() - starttime
-        for i in range(len(results)):
-            results[i] = (results[i][0], results[i][1], total_elapse / batch_size)
-
-        return results
-
-    def rescale_cell_bboxes(
-            self, img: np.ndarray, cell_bboxes: np.ndarray
-    ) -> np.ndarray:
-        h, w = img.shape[:2]
-        resized = 488
-        ratio = min(resized / h, resized / w)
-        w_ratio = resized / (w * ratio)
-        h_ratio = resized / (h * ratio)
-        cell_bboxes[:, 0::2] *= w_ratio
-        cell_bboxes[:, 1::2] *= h_ratio
-        return cell_bboxes
-
-    @staticmethod
-    def filter_blank_bbox(cell_bboxes: np.ndarray) -> np.ndarray:
-        # 过滤掉占位的bbox
-        mask = ~np.all(cell_bboxes == 0, axis=1)
-        return cell_bboxes[mask]
+        table_structs, cell_bboxes = self.postprocess_op(
+            bbox_preds, struct_probs, shape_lists, ori_imgs
+        )
+        return table_structs, cell_bboxes

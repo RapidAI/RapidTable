@@ -24,6 +24,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 ### 📅 最近动态
 
+2025-08-29 update: 发布2.1.0，支持batch推理
 2025-06-22 update: 发布v2.x，适配rapidocr v3.x \
 2025-01-09 update: 发布v1.x，全新接口升级。 \
 2024.12.30 update：支持Unitable模型的表格识别，使用pytorch框架 \
@@ -109,11 +110,13 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
 
 |`rapid_table`|OCR|
 |:---:|:---|
-|v0.x|`rapidocr_onnxruntime`|
-|v1.0.x|`rapidocr>=2.0.0,<3.0.0`|
 |v2.x|`rapidocr>=3.0.0`|
+|v1.0.x|`rapidocr>=2.0.0,<3.0.0`|
+|v0.x|`rapidocr_onnxruntime`|
 
-由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径（`v1.0.x`  参数变量名使用`model_path`,  `v2.x` 参数变量名变更为`model_dir_or_path`）。注意仅限于我们现支持的`model_type`。
+由于模型较小，预先将slanet-plus表格识别模型(`slanet-plus.onnx`)打包进了whl包内。其余模型在初始化`RapidTable`类时，会根据`model_type`来自动下载模型到安装包所在`models`目录下。
+
+当然也可以通过`RapidTableInput(model_path='')`来指定自己模型路径（`v1.0.x`  参数变量名使用`model_path`,  `v2.x` 参数变量名变更为`model_dir_or_path`）。注意仅限于我们现支持的`model_type`。
 
 > ⚠️注意：`rapid_table>=v1.0.0`之后，不再将`rapidocr`依赖强制打包到`rapid_table`中。使用前，需要自行安装`rapidocr`包。
 >
@@ -141,69 +144,66 @@ ModelType支持已有的4个模型 ([source](./rapid_table/utils/typings.py))：
 
 ```python
 class ModelType(Enum):
-    PPSTRUCTURE_EN = "ppstructure_en"
-    PPSTRUCTURE_ZH = "ppstructure_zh"
-    SLANETPLUS = "slanet_plus"
-    UNITABLE = "unitable"
+    PPSTRUCTURE_EN = "ppstructure_en" # onnxruntime
+    PPSTRUCTURE_ZH = "ppstructure_zh" # onnxruntime
+    SLANETPLUS = "slanet_plus"  # onnxruntime
+    UNITABLE = "unitable"   # torch推理引擎
+```
+
+#### batch_size推理
+
+```python
+from pathlib import Path
+
+from rapid_table import ModelType, RapidTable, RapidTableInput
+
+input_args = RapidTableInput(model_type=ModelType.PPSTRUCTURE_ZH)
+table_engine = RapidTable(input_args)
+
+img_list = list(Path("images").iterdir())
+results = table_engine(img_path, batch_size=3)  # 这里，batch_size默认为1
+
+# indexes：指定可视化的图像索引。默认为0
+results.vis(save_dir="outputs", save_name="vis", indexes=(0, 1, 2))
 ```
 
 ##### CPU使用
 
 ```python
-
-from rapidocr import RapidOCR
-
 from rapid_table import ModelType, RapidTable, RapidTableInput
-
-ocr_engine = RapidOCR()
 
 input_args = RapidTableInput(model_type=ModelType.UNITABLE)
 table_engine = RapidTable(input_args)
 
 img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
-
-# # 使用单字识别
-# ori_ocr_res = ocr_engine(img_path, return_word_box=True)
-# ocr_results = [
-#     [word_result[0][2], word_result[0][0], word_result[0][1]]
-#     for word_result in ori_ocr_res.word_results
-# ]
-# ocr_results = list(zip(*ocr_results))
-
 ori_ocr_res = ocr_engine(img_path)
-ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-results = table_engine(img_path, ocr_results=ocr_results)
+results = table_engine(img_path)
 results.vis(save_dir="outputs", save_name="vis")
 ```
 
 ##### GPU使用
 
+> `engine_cfg`中参数是和[`engine_cfg.yaml`](https://github.com/RapidAI/RapidTable/blob/6da3974a35ac5da8a5cf58194eab00b6886212e8/rapid_table/engine_cfg.yaml)相对应的。
+
 ```python
-
-from rapidocr import RapidOCR
-
 from rapid_table import ModelType, RapidTable, RapidTableInput
-
-ocr_engine = RapidOCR()
 
 # onnxruntime-gpu
 input_args = RapidTableInput(
-    model_type=ModelType.SLANETPLUS, engine_cfg={"use_cuda": True, "gpu_id": 1}
+    model_type=ModelType.SLANETPLUS,
+    engine_cfg={"use_cuda": True, "cuda_ep_cfg.gpu_id": 1}
 )
 
 # torch gpu
 # input_args = RapidTableInput(
 #     model_type=ModelType.UNITABLE,
-#     engine_cfg={"use_cuda": True, "cuda_ep_cfg.gpu_id": 1},
+#     engine_cfg={"use_cuda": True, "gpu_id": 1},
 # )
+
 table_engine = RapidTable(input_args)
 
 img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
-
-ori_ocr_res = ocr_engine(img_path)
-ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-
-results = table_engine(img_path, ocr_results=ocr_results)
+results = table_engine(img_path)
 results.vis(save_dir="outputs", save_name="vis")
 ```
 

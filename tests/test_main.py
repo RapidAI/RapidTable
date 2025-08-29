@@ -3,6 +3,7 @@
 # @Contact: liekkaskono@163.com
 import shlex
 import sys
+from ast import literal_eval
 from pathlib import Path
 
 import pytest
@@ -28,16 +29,16 @@ def test_only_table():
     table_engine = RapidTable(RapidTableInput(use_ocr=False))
     results = table_engine(img_path)
 
-    assert results.pred_html is None
-    assert results.cell_bboxes.shape == (16, 8)
+    assert len(results.pred_htmls) == 0
+    assert results.cell_bboxes[0].shape == (16, 8)
 
 
 def test_without_txt_table():
     img_path = test_file_dir / "table_without_txt.jpg"
     results = table_engine(img_path)
 
-    assert results.pred_html is None
-    assert results.cell_bboxes.shape == (16, 8)
+    assert results.pred_htmls[0] is None
+    assert results.cell_bboxes[0].shape == (16, 8)
 
 
 @pytest.mark.parametrize(
@@ -50,7 +51,7 @@ def test_without_txt_table():
 def test_main_cli(capsys, command, expected_output):
     main(shlex.split(command))
     output = capsys.readouterr().out.rstrip()
-    assert len(output) == expected_output
+    assert len(literal_eval(output)[0]) == expected_output
 
 
 @pytest.mark.parametrize(
@@ -66,8 +67,8 @@ def test_ocr_input(model_type, engine_type):
 
     input_args = RapidTableInput(model_type=model_type, engine_type=engine_type)
     table_engine = RapidTable(input_args)
-    table_results = table_engine(img_path, ocr_results=ocr_results)
-    assert table_results.pred_html.count("<tr>") == 16
+    table_results = table_engine(img_path, ocr_results=[ocr_results])
+    assert table_results.pred_htmls[0].count("<tr>") == 16
 
 
 @pytest.mark.parametrize(
@@ -81,5 +82,5 @@ def test_input_ocr_none(model_type, engine_type):
     input_args = RapidTableInput(model_type=model_type, engine_type=engine_type)
     table_engine = RapidTable(input_args)
     table_results = table_engine(img_path)
-    assert table_results.pred_html.count("<tr>") == 16
+    assert table_results.pred_htmls[0].count("<tr>") == 16
     assert len(table_results.cell_bboxes) == len(table_results.logic_points)

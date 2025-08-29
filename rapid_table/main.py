@@ -5,19 +5,21 @@ import argparse
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from tqdm import tqdm
 
 from .model_processor.main import ModelProcessor
 from .table_matcher import TableMatch
 from .utils import (
+    InputType,
     LoadImage,
     Logger,
     ModelType,
     RapidTableInput,
     RapidTableOutput,
-    get_boxes_recs,
+    format_ocr_results,
     import_package,
     is_url,
 )
@@ -31,7 +33,7 @@ class RapidTable:
         if cfg is None:
             cfg = RapidTableInput()
 
-        if not cfg.model_dir_or_path:
+        if not cfg.model_dir_or_path and cfg.model_type is not None:
             cfg.model_dir_or_path = ModelProcessor.get_model_path(cfg.model_type)
 
         self.cfg = cfg
@@ -64,96 +66,99 @@ class RapidTable:
 
         return PPTableStructurer(asdict(self.cfg))
 
-    def _batch_process(
-            self,
-            img_contents: List[Union[str, np.ndarray, bytes, Path]],
-            ocr_results: Optional[List] = None,
-            batch_size: int = 4,
-    ) -> List[RapidTableOutput]:
-        """批量处理图像"""
+    def __call__(
+        self,
+        img_contents: Union[List[InputType], InputType],
+        ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
+        batch_size: int = 1,
+    ) -> RapidTableOutput:
+        if not isinstance(img_contents, list):
+            img_contents = [img_contents]
+
         s = time.perf_counter()
 
-        images = []
-        for img_content in img_contents:
-            img = self.load_img(img_content)
-            images.append(img)
+        results = RapidTableOutput()
 
-        batch_dt_boxes = []
-        batch_rec_res = []
+        total_nums = len(img_contents)
+        for start_i in tqdm(range(0, total_nums, batch_size), desc="BatchRec"):
+            end_i = min(total_nums, start_i + batch_size)
 
-        for i, img in enumerate(images):
-            dt_boxes, rec_res = get_boxes_recs(ocr_results[i], img.shape[:2])
-            batch_dt_boxes.append(dt_boxes)
-            batch_rec_res.append(rec_res)
+            imgs = self._load_imgs(img_contents[start_i:end_i])
 
-        # 批量表格结构识别
-        batch_results = self.table_structure(images, batch_size)
-
-        output_results = []
-        for i, (img, (pred_structures, cell_bboxes, _)) in enumerate(zip(images, batch_results)):
+            pred_structures, cell_bboxes = self.table_structure(imgs)
             logic_points = self.table_matcher.decode_logic_points(pred_structures)
-            pred_html = self.get_table_matcher(
-                pred_structures, cell_bboxes, batch_dt_boxes[i], batch_rec_res[i]
-            )
-            result = RapidTableOutput(img, pred_html, cell_bboxes, logic_points, 0)
-            output_results.append(result)
 
-        total_elapse = time.perf_counter() - s
-        for result in output_results:
-            result.elapse = total_elapse / len(output_results)
+            if not self.cfg.use_ocr:
+                results.imgs.extend(imgs)
+                results.cell_bboxes.extend(cell_bboxes)
+                results.logic_points.extend(logic_points)
+                continue
 
-        return output_results
-
-    def __call__(
-            self,
-            img_content: Union[str, np.ndarray, bytes, Path],
-            ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
-            batch_size: int = 1,
-    ) -> RapidTableOutput:
-        if batch_size > 1:
-            return self._batch_process(img_content, ocr_results)
-        else:
-            s = time.perf_counter()
-
-            img = self.load_img(img_content)
-
-            dt_boxes, rec_res = self.get_ocr_results(img, ocr_results)
-            pred_structures, cell_bboxes, logic_points = self.get_table_rec_results(img)
-
-            pred_html = self.get_table_matcher(
+            dt_boxes, rec_res = self.get_ocr_results(imgs, start_i, end_i, ocr_results)
+            pred_htmls = self.table_matcher(
                 pred_structures, cell_bboxes, dt_boxes, rec_res
             )
 
-            elapse = time.perf_counter() - s
-            return RapidTableOutput(img, pred_html, cell_bboxes, logic_points, elapse)
+            results.imgs.extend(imgs)
+            results.pred_htmls.extend(pred_htmls)
+            results.cell_bboxes.extend(cell_bboxes)
+            results.logic_points.extend(logic_points)
+
+        elapse = time.perf_counter() - s
+        results.elapse = elapse / total_nums
+        return results
+
+    def _load_imgs(
+        self, img_content: Union[Sequence[InputType], InputType]
+    ) -> List[np.ndarray]:
+        img_contents = (
+            [img_content] if isinstance(img_content, InputType) else img_content
+        )
+        return [self.load_img(img) for img in img_contents]
 
     def get_ocr_results(
-            self, img: np.ndarray, ocr_results: Tuple[np.ndarray, Tuple[str], Tuple[float]]
-    ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+        self,
+        imgs: List[np.ndarray],
+        start_i: int,
+        end_i: int,
+        ocr_results: Optional[List[Tuple[np.ndarray, Tuple[str], Tuple[float]]]] = None,
+    ) -> Any:
+        batch_dt_boxes, batch_rec_res = [], []
+
         if ocr_results is not None:
-            return get_boxes_recs(ocr_results, img.shape[:2])
+            ocr_results_batch = ocr_results[start_i:end_i]
+            if len(ocr_results_batch) != len(imgs):
+                raise ValueError(
+                    f"Batch size mismatch: {len(imgs)} images but {len(ocr_results_batch)} OCR results "
+                    f"(indices {start_i}:{end_i})."
+                )
 
-        if not self.cfg.use_ocr:
-            return None, None
+            for img, ocr_result in zip(imgs, ocr_results_batch):
+                img_h, img_w = img.shape[:2]
+                dt_boxes, rec_res = format_ocr_results(ocr_result, img_h, img_w)
+                batch_dt_boxes.append(dt_boxes)
+                batch_rec_res.append(rec_res)
+            return batch_dt_boxes, batch_rec_res
 
-        ori_ocr_res = self.ocr_engine(img)
-        if ori_ocr_res.boxes is None:
-            logger.warning("OCR Result is empty")
-            return None, None
+        for img in tqdm(imgs, desc="OCR"):
+            if img is None:
+                continue
 
-        ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-        return get_boxes_recs(ocr_results, img.shape[:2])
+            ori_ocr_res = self.ocr_engine(img)
+            if ori_ocr_res.boxes is None:
+                logger.warning("OCR Result is empty")
+                batch_dt_boxes.append(None)
+                batch_rec_res.append(None)
+                continue
 
-    def get_table_rec_results(self, img: np.ndarray):
-        pred_structures, cell_bboxes, _ = self.table_structure(img)
-        logic_points = self.table_matcher.decode_logic_points(pred_structures)
-        return pred_structures, cell_bboxes, logic_points
+            img_h, img_w = img.shape[:2]
 
-    def get_table_matcher(self, pred_structures, cell_bboxes, dt_boxes, rec_res):
-        if dt_boxes is None and rec_res is None:
-            return None
+            ocr_result = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
+            dt_boxes, rec_res = format_ocr_results(ocr_result, img_h, img_w)
+            batch_dt_boxes.append(dt_boxes)
+            batch_rec_res.append(rec_res)
 
-        return self.table_matcher(pred_structures, cell_bboxes, dt_boxes, rec_res)
+        return batch_dt_boxes, batch_rec_res
 
 
 def parse_args(arg_list: Optional[List[str]] = None):
@@ -185,13 +190,8 @@ def main(arg_list: Optional[List[str]] = None):
     input_args = RapidTableInput(model_type=ModelType(args.model_type))
     table_engine = RapidTable(input_args)
 
-    if table_engine.ocr_engine is None:
-        raise ValueError("ocr engine is None")
-
-    ori_ocr_res = table_engine.ocr_engine(img_path)
-    ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
-    table_results = table_engine(img_path, ocr_results=ocr_results)
-    print(table_results.pred_html)
+    table_results = table_engine(img_path)
+    print(table_results.pred_htmls)
 
     if args.vis:
         save_dir = Path(".") if is_url(img_path) else Path(img_path).resolve().parent
