@@ -150,7 +150,7 @@ class ModelType(Enum):
     UNITABLE = "unitable"   # torch推理引擎
 ```
 
-#### batch_size推理
+#### Batch推理
 
 ```python
 from pathlib import Path
