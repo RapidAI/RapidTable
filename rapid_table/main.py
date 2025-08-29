@@ -70,7 +70,7 @@ class RapidTable:
         self,
         img_contents: Union[List[InputType], InputType],
         ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
-        batch_size: int = 3,
+        batch_size: int = 1,
     ) -> RapidTableOutput:
         if not isinstance(img_contents, list):
             img_contents = [img_contents]

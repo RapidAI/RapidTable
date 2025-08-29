@@ -23,9 +23,11 @@ class TorchInferSession(InferSession):
             self.engine_cfg[cfg["engine_type"].value], cfg["engine_cfg"]
         )
 
-        self.device = "cpu"
-        if engine_cfg.use_cuda:
-            self.device = f"cuda:{engine_cfg.gpu_id}"
+        self.device = torch.device(
+            f"cuda:{engine_cfg.gpu_id}"
+            if torch.cuda.is_available() and engine_cfg.use_cuda
+            else "cpu"
+        )
 
         model_info = cfg["model_dir_or_path"]
         self.encoder = self._init_model(model_info["encoder"], Encoder)
