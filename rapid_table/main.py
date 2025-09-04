@@ -5,7 +5,7 @@ import argparse
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, get_args
 
 import numpy as np
 from tqdm import tqdm
@@ -75,6 +75,16 @@ class RapidTable:
         if not isinstance(img_contents, list):
             img_contents = [img_contents]
 
+        for img_content in img_contents:
+            if not isinstance(img_content, get_args(InputType)):
+                type_names = ", ".join([t.__name__ for t in get_args(InputType)])
+                actual_type = (
+                    type(img_content).__name__ if img_content is not None else "None"
+                )
+                raise TypeError(
+                    f"Type Error: Expected input of type [{type_names}], but received '{img_content}' of type {actual_type}."
+                )
+
         s = time.perf_counter()
 
         results = RapidTableOutput()
@@ -111,9 +121,7 @@ class RapidTable:
     def _load_imgs(
         self, img_content: Union[Sequence[InputType], InputType]
     ) -> List[np.ndarray]:
-        img_contents = (
-            [img_content] if isinstance(img_content, InputType) else img_content
-        )
+        img_contents = img_content if isinstance(img_content, list) else [img_content]
         return [self.load_img(img) for img in img_contents]
 
     def get_ocr_results(
