@@ -121,9 +121,7 @@ class RapidTable:
     def _load_imgs(
         self, img_content: Union[Sequence[InputType], InputType]
     ) -> List[np.ndarray]:
-        img_contents = (
-            [img_content] if isinstance(img_content, InputType) else img_content
-        )
+        img_contents = img_content if isinstance(img_content, list) else [img_content]
         return [self.load_img(img) for img in img_contents]
 
     def get_ocr_results(
