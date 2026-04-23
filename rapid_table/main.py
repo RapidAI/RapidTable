@@ -69,7 +69,7 @@ class RapidTable:
     def __call__(
         self,
         img_contents: Union[List[InputType], InputType],
-        ocr_results: Optional[Tuple[np.ndarray, Tuple[str], Tuple[float]]] = None,
+        ocr_results: Optional[List[Tuple[np.ndarray, Tuple[str], Tuple[float]]]] = None,
         batch_size: int = 1,
     ) -> RapidTableOutput:
         s = time.perf_counter()
