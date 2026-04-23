@@ -82,7 +82,7 @@ unitable是来源unitable的transformer模型，精度最高，暂仅支持pytor
     img_path = "https://raw.githubusercontent.com/RapidAI/RapidTable/refs/heads/main/tests/test_files/table.jpg"
 
     ori_ocr_res = ocr_engine(img_path)
-    ocr_results = [ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores]
+    ocr_results = [(ori_ocr_res.boxes, ori_ocr_res.txts, ori_ocr_res.scores)]
 
     results = table_engine(img_path, ocr_results=ocr_results)
     results.vis(save_dir="outputs", save_name="vis")
